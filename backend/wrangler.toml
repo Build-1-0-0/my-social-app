@@ -1,0 +1,6 @@
+name = "my-worker"
+main = "index.js"
+compatibility_date = "2023-11-21"
+
+[vars]
+VITE_MONGODB_URI = "YOUR_MONGODB_CONNECTION_STRING"

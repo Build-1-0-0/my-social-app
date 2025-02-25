@@ -9,7 +9,7 @@ function App() {
     const [password, setPassword] = useState('');
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const apiUrl = 'YOUR_CLOUD_RUN_URL'; // Replace with your Cloud Run URL
+    const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your Cloud Run URL
 
     useEffect(() => {
         const fetchData = async () => {

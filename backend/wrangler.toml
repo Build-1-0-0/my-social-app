@@ -3,4 +3,9 @@ main = "index.js"
 compatibility_date = "2023-11-21"
 
 [vars]
-VITE_MONGODB_URI = "YOUR_MONGODB_CONNECTION_STRING"
+# ... other variables
+
+[[d1_databases]]
+binding = "DB"
+database_name = "social-app-db" # Or whatever your database name is
+database_id = "8168926d-ad89-4ee4-ac9a-3e16612615d2"

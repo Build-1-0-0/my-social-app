@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 
 function DataFetcher() {
-    const apiUrl = import.meta.env.VITE_MONGODB_URI; // Access environment variable
+    const apiUrl = import.meta.env.VITE_API_URL; // Backend API URL
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -9,7 +9,7 @@ function DataFetcher() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const response = await fetch('/api/data'); // Make sure your backend API is running
+                const response = await fetch(`${apiUrl}/api/data`); // Use apiUrl here
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -23,18 +23,9 @@ function DataFetcher() {
         }
 
         fetchData();
-    }, []); // Empty dependency array means this runs once on mount
+    }, []);
 
-    if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error: {error.message}</p>;
-    if (!data) return <p>No data to display.</p>;
-
-    return (
-        <div>
-            <h2>Data from API:</h2>
-            <pre>{JSON.stringify(data, null, 2)}</pre>
-        </div>
-    );
+    // ... rest of the component
 }
 
 export default DataFetcher;

@@ -8,4 +8,4 @@ compatibility_date = "2023-11-21"
 [[d1_databases]]
 binding = "DB"
 database_name = "social-app-db" # Or whatever your database name is
-database_id = "8168926d-ad89-4ee4-ac9a-3e16612615d2"
+database_id = "d4449abe-0417-4cc0-ad0f-267368ae0d94"

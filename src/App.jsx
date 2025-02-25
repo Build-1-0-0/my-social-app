@@ -9,29 +9,49 @@ function App() {
     const [password, setPassword] = useState('');
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const apiUrl = '/api'; // Adjust if needed
+    const apiUrl = 'YOUR_CLOUD_RUN_URL'; // Replace with your Cloud Run URL
 
     useEffect(() => {
-        axios.get(`${apiUrl}/data`).then(res => setData(res.data)).catch(err => console.error(err));
-    }, []);
+        const fetchData = async () => {
+            try {
+                const response = await axios.get(`${apiUrl}/api/data`);
+                setData(response.data);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                // Handle the error appropriately (e.g., show an error message)
+            }
+        };
+        fetchData();
+    }, [apiUrl]); // Add apiUrl as dependency
 
     const handleRegister = async () => {
         try {
-            await axios.post(`${apiUrl}/users/register`, { username, email, password });
+            await axios.post(`${apiUrl}/api/users/register`, { username, email, password });
             alert('Registration successful!');
-        } catch (err) {
-            alert(err.response.data.error);
+        } catch (error) {
+            if (error.response && error.response.data && error.response.data.error) {
+                alert(error.response.data.error);
+            } else {
+                alert('Registration failed.');
+                console.error('Registration error:', error);
+            }
         }
     };
 
     const handleLogin = async () => {
         try {
-            await axios.post(`${apiUrl}/users/login`, { username: loginUsername, password: loginPassword });
+            await axios.post(`${apiUrl}/api/users/login`, { username: loginUsername, password: loginPassword });
             alert('Login successful!');
-        } catch (err) {
-            alert(err.response.data.error);
+        } catch (error) {
+            if (error.response && error.response.data && error.response.data.error) {
+                alert(error.response.data.error);
+            } else {
+                alert('Login failed.');
+                console.error('Login error:', error);
+            }
         }
     };
+
     return (
         <div>
             <h1>Social Media App</h1>

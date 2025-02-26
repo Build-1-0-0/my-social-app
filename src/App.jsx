@@ -9,64 +9,88 @@ function App() {
     const [password, setPassword] = useState('');
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your Cloud Run URL
+    const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
+    const [errorMessage, setErrorMessage] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
             try {
                 const response = await axios.get(`${apiUrl}/api/data`);
                 setData(response.data);
             } catch (error) {
                 console.error('Error fetching data:', error);
-                // Handle the error appropriately (e.g., show an error message)
+                setErrorMessage('Failed to fetch data.');
+            } finally {
+                setLoading(false);
             }
         };
         fetchData();
-    }, [apiUrl]); // Add apiUrl as dependency
+    }, [apiUrl]);
 
     const handleRegister = async () => {
+        setLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('');
         try {
             await axios.post(`${apiUrl}/api/users/register`, { username, email, password });
-            alert('Registration successful!');
+            setSuccessMessage('Registration successful!');
+            setUsername('');
+            setEmail('');
+            setPassword('');
         } catch (error) {
             if (error.response && error.response.data && error.response.data.error) {
-                alert(error.response.data.error);
+                setErrorMessage(error.response.data.error);
             } else {
-                alert('Registration failed.');
+                setErrorMessage('Registration failed.');
                 console.error('Registration error:', error);
             }
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleLogin = async () => {
+        setLoading(true);
+        setErrorMessage('');
+        setSuccessMessage('');
         try {
             await axios.post(`${apiUrl}/api/users/login`, { username: loginUsername, password: loginPassword });
-            alert('Login successful!');
+            setSuccessMessage('Login successful!');
+            setLoginUsername('');
+            setLoginPassword('');
         } catch (error) {
             if (error.response && error.response.data && error.response.data.error) {
-                alert(error.response.data.error);
+                setErrorMessage(error.response.data.error);
             } else {
-                alert('Login failed.');
+                setErrorMessage('Login failed.');
                 console.error('Login error:', error);
             }
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div>
             <h1>Social Media App</h1>
+            {loading && <p>Loading...</p>}
+            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
+            {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
             {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
 
             <h2>Register</h2>
-            <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button onClick={handleRegister}>Register</button>
+            <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} id="registerUsername" name="registerUsername"/>
+            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} id="registerEmail" name="registerEmail"/>
+            <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} id="registerPassword" name="registerPassword"/>
+            <button onClick={handleRegister} disabled={loading}>Register</button>
 
             <h2>Login</h2>
-            <input placeholder="Username" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} />
-            <input type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
-            <button onClick={handleLogin}>Login</button>
+            <input placeholder="Username" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} id="loginUsername" name="loginUsername"/>
+            <input type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} id="loginPassword" name="loginPassword"/>
+            <button onClick={handleLogin} disabled={loading}>Login</button>
         </div>
     );
 }

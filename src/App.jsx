@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -18,10 +17,12 @@ function App() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const response = await axios.get(`${apiUrl}/api/data`);
-                console.log("API Response:", response.data); // Log response data
+                const fullUrl = `${apiUrl}api/data`; // Corrected URL construction
+                console.log("Full URL:", fullUrl); // Log the full URL
+                const response = await axios.get(fullUrl);
+                console.log("API Response:", response.data);
                 setData(response.data);
-                console.log("Data State:", response.data); // Log data state
+                console.log("Data State:", response.data);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 if (error.response && error.response.status === 404) {
@@ -41,7 +42,7 @@ function App() {
         setErrorMessage('');
         setSuccessMessage('');
         try {
-            await axios.post(`${apiUrl}/api/users/register`, { username, email, password });
+            await axios.post(`${apiUrl}api/users/register`, { username, email, password });
             setSuccessMessage('Registration successful!');
             setUsername('');
             setEmail('');
@@ -63,7 +64,7 @@ function App() {
         setErrorMessage('');
         setSuccessMessage('');
         try {
-            await axios.post(`${apiUrl}/api/users/login`, { username: loginUsername, password: loginPassword });
+            await axios.post(`${apiUrl}api/users/login`, { username: loginUsername, password: loginPassword });
             setSuccessMessage('Login successful!');
             setLoginUsername('');
             setLoginPassword('');

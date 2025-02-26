@@ -1,10 +1,12 @@
 // backend/index.js (Cloudflare Worker)
+import bcrypt from 'bcryptjs';
+
 export default {
     async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const path = url.pathname;
         const method = request.method;
-        const db = env.DB; // Access your D1 database
+        const db = env.DB;
 
         // CORS Preflight Request Handling
         if (method === 'OPTIONS') {
@@ -18,13 +20,14 @@ export default {
             });
         }
 
-        let response = null; // Initialize the response variable
+        let response = null;
 
         try {
             if (path === '/api/users/register' && method === 'POST') {
                 const { username, email, password } = await request.json();
-                // Replace with your actual D1 database register logic:
-                await db.prepare('INSERT INTO users (username, email, password) VALUES (?, ?, ?)').bind(username, email, password).run();
+                const saltRounds = 10;
+                const hashedPassword = await bcrypt.hash(password, saltRounds);
+                await db.prepare('INSERT INTO users (username, email, password) VALUES (?, ?, ?)').bind(username, email, hashedPassword).run();
 
                 response = new Response(JSON.stringify({ message: 'User registered successfully' }), {
                     status: 201,
@@ -32,10 +35,9 @@ export default {
                 });
             } else if (path === '/api/users/login' && method === 'POST') {
                 const { username, password } = await request.json();
-                // Replace with your actual D1 database login logic:
-                const user = await db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').bind(username, password).first();
+                const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
 
-                if (user) {
+                if (user && await bcrypt.compare(password, user.password)) {
                     response = new Response(JSON.stringify({ message: 'Login successful' }), {
                         status: 200,
                         headers: { 'Content-Type': 'application/json' },

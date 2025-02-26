@@ -7,7 +7,7 @@ export default {
             const response = new Response(JSON.stringify({message: "test"}), {status: 200, headers: {'Content-Type': 'application/json'}});
             if (response) {
                 const newHeaders = new Headers(response.headers);
-                newHeaders.set('Access-Control-Allow-Origin', 'https://my-social-app.pages.dev');
+                newHeaders.set('Access-Control-Allow-Origin', 'https://a6010c9b.my-social-app.pages.dev/');
                 return new Response(response.body, {
                     status: response.status,
                     headers: newHeaders,

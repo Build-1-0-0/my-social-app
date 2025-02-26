@@ -14,7 +14,8 @@
         "axios": "^1.6.7",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "bcryptjs": "^2.4.3"
+        "bcryptjs": "^2.4.3",
+        "@tsndr/cloudflare-worker-jwt": "^2.2.1" // Added JWT dependency
     },
     "devDependencies": {
         "@types/react": "^18.2.15",

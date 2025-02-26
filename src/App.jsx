@@ -17,8 +17,8 @@ function App() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const fullUrl = `${apiUrl}api/data`; // Corrected URL construction
-                console.log("Full URL:", fullUrl); // Log the full URL
+                const fullUrl = `${apiUrl}api/data`;
+                console.log("Full URL:", fullUrl);
                 const response = await axios.get(fullUrl);
                 console.log("API Response:", response.data);
                 setData(response.data);
@@ -64,10 +64,15 @@ function App() {
         setErrorMessage('');
         setSuccessMessage('');
         try {
-            await axios.post(`${apiUrl}api/users/login`, { username: loginUsername, password: loginPassword });
+            const response = await axios.post(`${apiUrl}api/users/login`, { username: loginUsername, password: loginPassword });
             setSuccessMessage('Login successful!');
             setLoginUsername('');
             setLoginPassword('');
+            // Store the JWT from the response in local storage or a cookie
+            if(response.data.token){
+                localStorage.setItem('token', response.data.token);
+            }
+
         } catch (error) {
             if (error.response && error.response.data && error.response.data.error) {
                 setErrorMessage(error.response.data.error);
@@ -86,7 +91,13 @@ function App() {
             {loading && <p>Loading...</p>}
             {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
             {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
-            {data && <pre>{JSON.stringify(data, null, 2)}</pre>}
+            {data && data.map(user => (
+                <div key={user.id}>
+                    <p>Username: {user.username}</p>
+                    <p>Email: {user.email}</p>
+                    {/* Do not display password */}
+                </div>
+            ))}
 
             <h2>Register</h2>
             <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} id="registerUsername" name="registerUsername"/>

@@ -9,7 +9,7 @@ function App() {
     const [password, setPassword] = useState('');
     const [loginUsername, setLoginUsername] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const apiUrl = 'https://my-worker.africancontent807.workers.dev/api/data';
+    const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);

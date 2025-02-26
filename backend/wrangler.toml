@@ -1,6 +1,6 @@
 name = "my-worker"
 main = "index.js"
-compatibility_date = "2025-2-26"
+compatibility_date = "2025-02-26"
 
 compatibility_flags = ["nodejs_compat"] # Correct placement
 

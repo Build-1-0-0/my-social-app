@@ -1,11 +1,59 @@
-name = "my-worker"
-main = "index.js"
-compatibility_date = "2023-11-21"
+name = "my-worker"  # Replace with your worker's name
+main = "index.js"    # Replace if your entry point is different
+compatibility_date = "2023-11-21" # Or the latest date
 
+# Environment variables
 [vars]
-# ... other variables
+# Add any environment variables here.
+# For example:
+# API_KEY = "your_api_key"
 
+# Bindings for D1 databases
 [[d1_databases]]
-binding = "DB"
-database_name = "social-app-db" # Or whatever your database name is
-database_id = "8168926d-ad89-4ee4-ac9a-3e16612615d2"
+binding = "DB"  # The variable name you'll use in your code (e.g., env.DB)
+database_name = "social-app-db"  # Replace with your database name
+database_id = "8168926d-ad89-4ee4-ac9a-3e16612615d2" # Replace with your database ID
+
+# Bindings for R2 buckets (if you're using R2)
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "your-bucket-name"
+
+# Bindings for KV namespaces (if you're using KV)
+# [[kv_namespaces]]
+# binding = "MY_KV"
+# id = "your-kv-namespace-id"
+
+# Bindings for Durable Objects (if you're using Durable Objects)
+# [[durable_objects.bindings]]
+# name = "MY_DURABLE_OBJECT"
+# class_name = "MyDurableObjectClassName"
+
+# Secrets (for sensitive data)
+# [secrets]
+# API_SECRET = "your_api_secret"
+
+# Observability (logging)
+[observability.logs]
+enabled = true
+
+# Compatibility flags (if needed)
+# compatibility_flags = ["nodejs_compat"]
+
+# Build settings (if needed)
+# [build]
+# command = "npm run build"
+# watch_dir = "./src"
+
+# Routes (if you want to route specific requests to your worker)
+# [[routes]]
+# pattern = "your-domain.com/api/*"
+# zone_name = "your-domain.com"
+
+# Account ID and Zone ID (if needed for specific commands)
+# account_id = "your-account-id"
+# zone_id = "your-zone-id"
+
+# Tail settings (for live logging)
+# [tail]
+# format = "pretty"

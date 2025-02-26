@@ -19,10 +19,16 @@ function App() {
             setLoading(true);
             try {
                 const response = await axios.get(`${apiUrl}/api/data`);
+                console.log("API Response:", response.data); // Log response data
                 setData(response.data);
+                console.log("Data State:", response.data); // Log data state
             } catch (error) {
                 console.error('Error fetching data:', error);
-                setErrorMessage('Failed to fetch data.');
+                if (error.response && error.response.status === 404) {
+                    setErrorMessage("404: Resource not found.");
+                } else {
+                    setErrorMessage("Failed to fetch data.");
+                }
             } finally {
                 setLoading(false);
             }

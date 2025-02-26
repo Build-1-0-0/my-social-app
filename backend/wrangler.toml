@@ -1,9 +1,11 @@
 name = "my-worker"
 main = "index.js"
-compatibility_date = "2023-11-21"
+compatibility_date = "2025-2-26"
+
+compatibility_flags = ["nodejs_compat"] # Correct placement
 
 [vars]
-# Add any environment variables here.
+# ... your vars
 
 [[d1_databases]]
 binding = "DB"
@@ -13,41 +15,4 @@ database_id = "8168926d-ad89-4ee4-ac9a-3e16612615d2"
 [observability.logs]
 enabled = true
 
-compatibility_flags = ["nodejs_compat"]
-
-# If you need to build your worker before deploying, uncomment and configure:
-# [build]
-# command = "npm run build"
-# watch_dir = "./" # Adjust as needed
-
-# If you want to route specific requests to your worker, uncomment and configure:
-# [[routes]]
-# pattern = "my-worker.africancontent807.workers.dev/*" # Or your custom domain
-# zone_name = "africancontent807.workers.dev" # Or your zone name
-
-# If you're using secrets:
-# [secrets]
-# API_SECRET = "your_api_secret"
-
-# If you're using R2:
-# [[r2_buckets]]
-# binding = "MY_BUCKET"
-# bucket_name = "your-bucket-name"
-
-# If you're using KV:
-# [[kv_namespaces]]
-# binding = "MY_KV"
-# id = "your-kv-namespace-id"
-
-# If you're using Durable Objects:
-# [[durable_objects.bindings]]
-# name = "MY_DURABLE_OBJECT"
-# class_name = "MyDurableObjectClassName"
-
-# Account ID and Zone ID (if needed):
-# account_id = "your-account-id"
-# zone_id = "your-zone-id"
-
-# Tail settings (for live logging):
-# [tail]
-# format = "pretty"
+# ... your other settings

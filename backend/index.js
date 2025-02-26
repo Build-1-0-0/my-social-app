@@ -10,7 +10,7 @@ export default {
             return new Response(null, {
                 status: 204,
                 headers: {
-                    'Access-Control-Allow-Origin': 'https://a6010c9b.my-social-app.pages.dev', // Replace with your allowed origin
+                    'Access-Control-Allow-Origin': 'https://my-social-app.pages.dev/, // Replace with your allowed origin
                     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                     'Access-Control-Allow-Headers': 'Content-Type',
                 },
@@ -57,7 +57,7 @@ export default {
         // Add CORS headers to all responses
         if (response) {
             const newHeaders = new Headers(response.headers);
-            newHeaders.set('Access-Control-Allow-Origin', 'https://a6010c9b.my-social-app.pages.dev'); // Use the correct origin
+            newHeaders.set('Access-Control-Allow-Origin', 'https://my-social-app.pages.dev/'); // Use the correct origin
             return new Response(response.body, {
                 status: response.status,
                 headers: newHeaders,

@@ -10,7 +10,7 @@ export default {
             return new Response(null, {
                 status: 204,
                 headers: {
-                    'Access-Control-Allow-Origin': 'https://my-social-app.pages.dev/, // Replace with your allowed origin
+                    'Access-Control-Allow-Origin': 'https://my-social-app.pages.dev', // Replace with your allowed origin
                     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
                     'Access-Control-Allow-Headers': 'Content-Type',
                 },

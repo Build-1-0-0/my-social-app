@@ -1,13 +1,16 @@
 name = "my-worker"
 main = "index.js"
-compatibility_date = "2023-11-21"
+compatibility_date = "2025-02-27"
 
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-JWT_SECRET = "123456789123456789" 
+JWT_SECRET = "123456789123456789"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "social-app-db"
 database_id = "8168926d-ad89-4ee4-ac9a-3e16612615d2"
+
+[observability.logs]
+enabled = true

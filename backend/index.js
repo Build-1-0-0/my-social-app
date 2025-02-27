@@ -79,8 +79,27 @@ export default {
                 if (!isValid) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
-                const { username } = await jwt.decode(token, jwtSecret);
+
+                let username;
+                try {
+                    const decodedToken = await jwt.decode(token, jwtSecret);
+                    username = decodedToken.username;
+                    if (!username) {
+                        console.error("JWT missing username claim");
+                        return corsResponse({ error: 'Unauthorized: Invalid token (missing username)' }, 401);
+                    }
+                } catch (jwtError) {
+                    console.error("JWT decode error:", jwtError);
+                    return corsResponse({ error: 'Unauthorized: Invalid token' }, 401);
+                }
+
+
                 const { content } = await request.json();
+
+                console.log("DEBUG: Attempting to create post with:");
+                console.log("DEBUG: Username:", username);
+                console.log("DEBUG: Content:", content);
+
                 const result = await db.prepare('INSERT INTO posts (username, content) VALUES (?, ?) RETURNING id, username, content').bind(username, content).first();
                 return corsResponse(result, 201);
             } else if (path === '/api/posts' && method === 'GET') {

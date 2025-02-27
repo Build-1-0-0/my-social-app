@@ -1,4 +1,3 @@
-// index.js (Cloudflare Worker)
 import bcrypt from 'bcryptjs';
 import jwt from '@tsndr/cloudflare-worker-jwt';
 
@@ -44,20 +43,17 @@ export default {
                 return corsResponse({ message: 'User registered successfully' }, 201);
             } else if (path === '/api/users/login' && method === 'POST') {
                 const { username, password } = await request.json();
-                console.log("Login Request:", JSON.stringify({ username, password })); // Added logging
-
+                console.log("Login Request:", JSON.stringify({ username, password }));
                 const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
-                console.log("Database User:", JSON.stringify(user)); // Added logging
-
+                console.log("Database User:", JSON.stringify(user));
                 if (user && await bcrypt.compare(password, user.password)) {
-                    console.log("bcrypt compare success"); //Added logging
+                    console.log("bcrypt compare success");
                     console.log(`User logged in: ${username}`);
-
                     const token = await jwt.sign({ username: user.username }, jwtSecret);
-                    console.log("JWT Token:", token); // Added logging
+                    console.log("JWT Token:", token);
                     return corsResponse({ message: 'Login successful', token });
                 } else {
-                    console.log("bcrypt compare failed"); //Added logging
+                    console.log("bcrypt compare failed");
                     return corsResponse({ error: 'Invalid username or password' }, 401);
                 }
             } else if (path === '/api/data' && method === 'GET') {
@@ -65,15 +61,39 @@ export default {
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
-
                 const token = authHeader.substring(7);
                 const isValid = await jwt.verify(token, jwtSecret);
-
                 if (!isValid) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
-
                 const results = await db.prepare('SELECT id, username, email FROM users').all();
+                const data = results.results;
+                return corsResponse(data);
+            } else if (path === '/api/posts' && method === 'POST') {
+                const authHeader = request.headers.get('Authorization');
+                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                    return corsResponse({ error: 'Unauthorized' }, 401);
+                }
+                const token = authHeader.substring(7);
+                const isValid = await jwt.verify(token, jwtSecret);
+                if (!isValid) {
+                    return corsResponse({ error: 'Unauthorized' }, 401);
+                }
+                const { username } = await jwt.decode(token, jwtSecret);
+                const { content } = await request.json();
+                const result = await db.prepare('INSERT INTO posts (username, content) VALUES (?, ?) RETURNING id, username, content').bind(username, content).first();
+                return corsResponse(result, 201);
+            } else if (path === '/api/posts' && method === 'GET') {
+                const authHeader = request.headers.get('Authorization');
+                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                    return corsResponse({ error: 'Unauthorized' }, 401);
+                }
+                const token = authHeader.substring(7);
+                const isValid = await jwt.verify(token, jwtSecret);
+                if (!isValid) {
+                    return corsResponse({ error: 'Unauthorized' }, 401);
+                }
+                const results = await db.prepare('SELECT id, username, content FROM posts ORDER BY id DESC').all();
                 const data = results.results;
                 return corsResponse(data);
             } else if (path === '/') {

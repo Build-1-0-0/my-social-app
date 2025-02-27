@@ -30,6 +30,10 @@ function App() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            console.log("DEBUG: fetchData() - Retrieved token from localStorage:", token); // ADDED
+            if (!token) {
+                console.warn("DEBUG: fetchData() - No token found in localStorage!"); // ADDED
+            }
             const response = await axios.get(`${apiUrl}api/data`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -49,6 +53,10 @@ function App() {
         setLoading(true);
         try {
             const token = localStorage.getItem('token');
+            console.log("DEBUG: fetchPosts() - Retrieved token from localStorage:", token); // ADDED
+            if (!token) {
+                console.warn("DEBUG: fetchPosts() - No token found in localStorage!"); // ADDED
+            }
             const response = await axios.get(`${apiUrl}api/posts`, {
                 headers: { Authorization: `Bearer ${token}` },
             });

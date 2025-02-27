@@ -213,3 +213,16 @@ function App() {
                     <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 w-full mb-2" />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="border p-2 w-full mb-2" />
                     <button onClick={handleRegister} disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Register</button>
+
+                    <h2 className="text-xl font-semibold mt-4">Login</h2>
+                    <input placeholder="Username" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="border p-2 w-full mb-2" />
+                    <input type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="border p-2 w-full mb-2" />
+                    <button onClick={handleLogin} disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Login</button>
+                </>
+            )}
+        </div>
+    );
+}
+
+export default App;
+```

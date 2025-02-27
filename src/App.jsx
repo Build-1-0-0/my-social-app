@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './index.css'; // Import your CSS file
+import './index.css';
 
 function App() {
     const [data, setData] = useState(null);
@@ -22,7 +22,7 @@ function App() {
         if (token) {
             setIsLoggedIn(true);
             fetchData();
-            fetchPosts(); // Fetch posts on login
+            fetchPosts();
         }
     }, []);
 
@@ -34,10 +34,10 @@ function App() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setData(response.data);
-            setErrorMessage("");
+            setErrorMessage('');
         } catch (error) {
             console.error('Error fetching data:', error);
-            setErrorMessage("Session expired or invalid. Please log in again.");
+            setErrorMessage('Session expired or invalid. Please log in again.');
             setIsLoggedIn(false);
             localStorage.removeItem('token');
         } finally {
@@ -55,7 +55,7 @@ function App() {
             setPosts(response.data);
         } catch (error) {
             console.error('Error fetching posts:', error);
-            setErrorMessage("Failed to fetch posts.");
+            setErrorMessage('Failed to fetch posts.');
         } finally {
             setLoading(false);
         }
@@ -65,6 +65,11 @@ function App() {
         setLoading(true);
         setErrorMessage('');
         setSuccessMessage('');
+        if (!username || !email || !password) {
+            setErrorMessage('Please fill in all fields.');
+            setLoading(false);
+            return;
+        }
         try {
             await axios.post(`${apiUrl}api/users/register`, { username, email, password });
             setSuccessMessage('Registration successful! You can now log in.');
@@ -87,6 +92,11 @@ function App() {
         setLoading(true);
         setErrorMessage('');
         setSuccessMessage('');
+        if (!loginUsername || !loginPassword) {
+            setErrorMessage('Please enter your username and password.');
+            setLoading(false);
+            return;
+        }
         try {
             const response = await axios.post(`${apiUrl}api/users/login`, { username: loginUsername, password: loginPassword });
             setSuccessMessage('Login successful!');
@@ -96,7 +106,7 @@ function App() {
                 localStorage.setItem('token', response.data.token);
                 setIsLoggedIn(true);
                 fetchData();
-                fetchPosts(); // Fetch posts on login
+                fetchPosts();
             }
         } catch (error) {
             if (error.response && error.response.data && error.response.data.error) {
@@ -114,13 +124,18 @@ function App() {
         localStorage.removeItem('token');
         setIsLoggedIn(false);
         setData(null);
-        setPosts([]); // Clear posts on logout.
-        setSuccessMessage("Logged out successfully.");
+        setPosts([]);
+        setSuccessMessage('Logged out successfully.');
     };
 
     const handleCreatePost = async () => {
         setLoading(true);
         setErrorMessage('');
+        if (!postContent) {
+            setErrorMessage('Please enter some content for your post.');
+            setLoading(false);
+            return;
+        }
         try {
             const token = localStorage.getItem('token');
             const response = await axios.post(
@@ -128,7 +143,7 @@ function App() {
                 { content: postContent },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            setPosts([response.data, ...posts]); // Add new post to the beginning of the array
+            setPosts([response.data, ...posts]);
             setPostContent('');
         } catch (error) {
             setErrorMessage('Failed to create post.');
@@ -197,8 +212,4 @@ function App() {
                     <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="border p-2 w-full mb-2" />
                     <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 w-full mb-2" />
                     <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="border p-2 w-full mb-2" />
-                    <button onClick={handleRegister} disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Register</button>
-
-                    <h2 className="text-xl font-semibold mt-4">Login</h2>
-                    <input placeholder="Username" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="border p-2 w-full mb-2" />
-                    <input type="password" placeholder="Password" value={
+                    <button onClick={handleRegister} disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded

@@ -49,8 +49,9 @@ export default {
                 if (user && await bcrypt.compare(password, user.password)) {
                     console.log("bcrypt compare success");
                     console.log(`User logged in: ${username}`);
+                    // Log the generated JWT token - for debugging
                     const token = await jwt.sign({ username: user.username }, jwtSecret);
-                    console.log("JWT Token:", token);
+                    console.log("JWT Token Generated:", token);
                     return corsResponse({ message: 'Login successful', token });
                 } else {
                     console.log("bcrypt compare failed");
@@ -92,7 +93,6 @@ export default {
                     console.error("JWT decode error:", jwtError);
                     return corsResponse({ error: 'Unauthorized: Invalid token' }, 401);
                 }
-
 
                 const { content } = await request.json();
 

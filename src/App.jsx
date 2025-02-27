@@ -1,4 +1,3 @@
-
 // frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -69,16 +68,20 @@ function App() {
         setErrorMessage('');
         setSuccessMessage('');
         try {
+            console.log("Login Attempt:", { loginUsername, loginPassword }); // Added logging
             const response = await axios.post(`${apiUrl}api/users/login`, { username: loginUsername, password: loginPassword });
+            console.log("Login Response:", response); // Added logging
             setSuccessMessage('Login successful!');
             setLoginUsername('');
             setLoginPassword('');
             if (response.data.token) {
                 localStorage.setItem('token', response.data.token);
+                console.log("Token Stored:", localStorage.getItem('token')); // Added logging
                 setIsLoggedIn(true);
                 fetchData();
             }
         } catch (error) {
+            console.error("Login Error:", error); // Added logging
             if (error.response && error.response.data && error.response.data.error) {
                 setErrorMessage(error.response.data.error);
             } else {

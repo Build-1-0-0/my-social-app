@@ -101,6 +101,9 @@ export default {
                 console.log("DEBUG: Content:", content);
 
                 const result = await db.prepare('INSERT INTO posts (username, content) VALUES (?, ?) RETURNING id, username, content').bind(username, content).first();
+
+                console.log("DEBUG: Database INSERT result:", JSON.stringify(result)); // Added logging for 'result'
+
                 return corsResponse(result, 201);
             } else if (path === '/api/posts' && method === 'GET') {
                 const authHeader = request.headers.get('Authorization');

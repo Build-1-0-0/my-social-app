@@ -9,7 +9,7 @@ export default {
         const method = request.method;
         const db = env.DB;
         const origin = 'https://my-social-app.pages.dev';
-        const jwtSecret = env.JWT_SECRET; // Ensure you set this in wrangler.toml
+        const jwtSecret = env.JWT_SECRET;
 
         const corsResponse = (response, status = 200) => {
             const headers = {
@@ -44,14 +44,20 @@ export default {
                 return corsResponse({ message: 'User registered successfully' }, 201);
             } else if (path === '/api/users/login' && method === 'POST') {
                 const { username, password } = await request.json();
+                console.log("Login Request:", JSON.stringify({ username, password })); // Added logging
+
                 const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+                console.log("Database User:", JSON.stringify(user)); // Added logging
 
                 if (user && await bcrypt.compare(password, user.password)) {
+                    console.log("bcrypt compare success"); //Added logging
                     console.log(`User logged in: ${username}`);
 
                     const token = await jwt.sign({ username: user.username }, jwtSecret);
+                    console.log("JWT Token:", token); // Added logging
                     return corsResponse({ message: 'Login successful', token });
                 } else {
+                    console.log("bcrypt compare failed"); //Added logging
                     return corsResponse({ error: 'Invalid username or password' }, 401);
                 }
             } else if (path === '/api/data' && method === 'GET') {
@@ -60,14 +66,14 @@ export default {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
 
-                const token = authHeader.substring(7); // Remove "Bearer "
+                const token = authHeader.substring(7);
                 const isValid = await jwt.verify(token, jwtSecret);
 
                 if (!isValid) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
 
-                const results = await db.prepare('SELECT id, username, email FROM users').all(); // Exclude password!
+                const results = await db.prepare('SELECT id, username, email FROM users').all();
                 const data = results.results;
                 return corsResponse(data);
             } else if (path === '/') {

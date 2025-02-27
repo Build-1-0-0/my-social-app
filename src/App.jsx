@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import './index.css'; // Import your CSS file
 
 function App() {
     const [data, setData] = useState(null);
@@ -13,12 +14,15 @@ function App() {
     const [successMessage, setSuccessMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [postContent, setPostContent] = useState('');
+    const [posts, setPosts] = useState([]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
             setIsLoggedIn(true);
             fetchData();
+            fetchPosts(); // Fetch posts on login
         }
     }, []);
 
@@ -36,6 +40,22 @@ function App() {
             setErrorMessage("Session expired or invalid. Please log in again.");
             setIsLoggedIn(false);
             localStorage.removeItem('token');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchPosts = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.get(`${apiUrl}api/posts`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            setPosts(response.data);
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+            setErrorMessage("Failed to fetch posts.");
         } finally {
             setLoading(false);
         }
@@ -76,6 +96,7 @@ function App() {
                 localStorage.setItem('token', response.data.token);
                 setIsLoggedIn(true);
                 fetchData();
+                fetchPosts(); // Fetch posts on login
             }
         } catch (error) {
             if (error.response && error.response.data && error.response.data.error) {
@@ -93,58 +114,91 @@ function App() {
         localStorage.removeItem('token');
         setIsLoggedIn(false);
         setData(null);
+        setPosts([]); // Clear posts on logout.
         setSuccessMessage("Logged out successfully.");
     };
 
+    const handleCreatePost = async () => {
+        setLoading(true);
+        setErrorMessage('');
+        try {
+            const token = localStorage.getItem('token');
+            const response = await axios.post(
+                `${apiUrl}api/posts`,
+                { content: postContent },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            setPosts([response.data, ...posts]); // Add new post to the beginning of the array
+            setPostContent('');
+        } catch (error) {
+            setErrorMessage('Failed to create post.');
+            console.error('Post creation error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <div>
-            <h1>Social Media App</h1>
+        <div className="container mx-auto p-4">
+            <h1 className="text-2xl font-bold mb-4">Social Media App</h1>
             {loading && <p>Loading...</p>}
-            {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
-            {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
+            {errorMessage && <p className="text-red-500 mb-2">{errorMessage}</p>}
+            {successMessage && <p className="text-green-500 mb-2">{successMessage}</p>}
 
             {isLoggedIn && (
                 <>
-                    <button onClick={handleLogout}>Logout</button>
-                    {data && data.length > 0 ? (
-                        <table>
+                    <button onClick={handleLogout} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4">Logout</button>
+
+                    <div className="mb-4">
+                        <textarea
+                            value={postContent}
+                            onChange={(e) => setPostContent(e.target.value)}
+                            placeholder="Write a post..."
+                            className="border p-2 w-full"
+                        />
+                        <button onClick={handleCreatePost} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-2">Post</button>
+                    </div>
+
+                    {posts.length > 0 && (
+                        <div className="mb-4">
+                            <h2 className="text-xl font-semibold mb-2">Posts</h2>
+                            {posts.map((post) => (
+                                <div key={post.id} className="border p-2 mb-2">
+                                    <p>{post.content}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {data && data.length > 0 && (
+                        <table className="min-w-full divide-y divide-gray-200">
                             <thead>
                                 <tr>
-                                    <th>Username</th>
-                                    <th>Email</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-left text-xs leading-4 font-medium text-gray-500 uppercase tracking-wider">Email</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="bg-white divide-y divide-gray-200">
                                 {data.map((user) => (
                                     <tr key={user.id}>
-                                        <td>{user.username}</td>
-                                        <td>{user.email}</td>
+                                        <td className="px-6 py-4 whitespace-no-wrap">{user.username}</td>
+                                        <td className="px-6 py-4 whitespace-no-wrap">{user.email}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
-                    ) : (
-                        <p>No user data available.</p>
                     )}
                 </>
             )}
 
             {!isLoggedIn && (
                 <>
-                    <h2>Register</h2>
-                    <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-                    <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                    <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    <button onClick={handleRegister} disabled={loading}>Register</button>
+                    <h2 className="text-xl font-semibold mt-4">Register</h2>
+                    <input placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} className="border p-2 w-full mb-2" />
+                    <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="border p-2 w-full mb-2" />
+                    <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="border p-2 w-full mb-2" />
+                    <button onClick={handleRegister} disabled={loading} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Register</button>
 
-                    <h2>Login</h2>
-                    <input placeholder="Username" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} />
-                    <input type="password" placeholder="Password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
-                    <button onClick={handleLogin} disabled={loading}>Login</button>
-                </>
-            )}
-        </div>
-    );
-}
-
-export default App;
+                    <h2 className="text-xl font-semibold mt-4">Login</h2>
+                    <input placeholder="Username" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="border p-2 w-full mb-2" />
+                    <input type="password" placeholder="Password" value={

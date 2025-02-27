@@ -1,4 +1,3 @@
-// frontend/src/App.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
@@ -31,9 +30,10 @@ function App() {
                 headers: { Authorization: `Bearer ${token}` },
             });
             setData(response.data);
+            setErrorMessage("");
         } catch (error) {
             console.error('Error fetching data:', error);
-            setErrorMessage("Failed to fetch data. Please log in.");
+            setErrorMessage("Session expired or invalid. Please log in again.");
             setIsLoggedIn(false);
             localStorage.removeItem('token');
         } finally {
@@ -47,7 +47,7 @@ function App() {
         setSuccessMessage('');
         try {
             await axios.post(`${apiUrl}api/users/register`, { username, email, password });
-            setSuccessMessage('Registration successful! Please log in.');
+            setSuccessMessage('Registration successful! You can now log in.');
             setUsername('');
             setEmail('');
             setPassword('');
@@ -68,20 +68,16 @@ function App() {
         setErrorMessage('');
         setSuccessMessage('');
         try {
-            console.log("Login Attempt:", { loginUsername, loginPassword }); // Added logging
             const response = await axios.post(`${apiUrl}api/users/login`, { username: loginUsername, password: loginPassword });
-            console.log("Login Response:", response); // Added logging
             setSuccessMessage('Login successful!');
             setLoginUsername('');
             setLoginPassword('');
             if (response.data.token) {
                 localStorage.setItem('token', response.data.token);
-                console.log("Token Stored:", localStorage.getItem('token')); // Added logging
                 setIsLoggedIn(true);
                 fetchData();
             }
         } catch (error) {
-            console.error("Login Error:", error); // Added logging
             if (error.response && error.response.data && error.response.data.error) {
                 setErrorMessage(error.response.data.error);
             } else {
@@ -93,18 +89,45 @@ function App() {
         }
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+        setData(null);
+        setSuccessMessage("Logged out successfully.");
+    };
+
     return (
         <div>
             <h1>Social Media App</h1>
             {loading && <p>Loading...</p>}
             {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
             {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
-            {isLoggedIn && data && data.map(user => (
-                <div key={user.id}>
-                    <p>Username: {user.username}</p>
-                    <p>Email: {user.email}</p>
-                </div>
-            ))}
+
+            {isLoggedIn && (
+                <>
+                    <button onClick={handleLogout}>Logout</button>
+                    {data && data.length > 0 ? (
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.map((user) => (
+                                    <tr key={user.id}>
+                                        <td>{user.username}</td>
+                                        <td>{user.email}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <p>No user data available.</p>
+                    )}
+                </>
+            )}
 
             {!isLoggedIn && (
                 <>

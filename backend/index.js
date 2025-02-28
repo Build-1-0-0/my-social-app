@@ -84,12 +84,13 @@ export default {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
 
-                let username;
+                let extractedUsername;
                 try {
                     const decodedToken = await jwt.decode(token, jwtSecret);
-                    console.log("DEBUG: Decoded Token:", decodedToken); // Added log
-                    username = decodedToken.username;
-                    if (!username) {
+                    console.log("DEBUG: Decoded Token:", decodedToken);
+                    console.log("DEBUG: typeof extractedUsername:", typeof decodedToken.username);
+                    extractedUsername = decodedToken.username;
+                    if (extractedUsername === undefined) {
                         console.error("JWT missing username claim");
                         return corsResponse({ error: 'Unauthorized: Invalid token (missing username)' }, 401);
                     }
@@ -100,15 +101,20 @@ export default {
 
                 const { content } = await request.json();
 
-                console.log("DEBUG: Attempting to create post with:");
-                console.log("DEBUG: Username:", username);
-                console.log("DEBUG: Content:", content);
+                console.log("DEBUG: extractedUsername before insertion:", extractedUsername);
+                const preparedStatement = db.prepare('INSERT INTO posts (username, content) VALUES (?, ?) RETURNING id, username, content');
+                console.log("DEBUG: Prepared statement created");
+                const boundStatement = preparedStatement.bind(extractedUsername, content);
+                console.log("DEBUG: Statement bound");
 
-                const result = await db.prepare('INSERT INTO posts (username, content) VALUES (?, ?) RETURNING id, username, content').bind(username, content).first();
-
-                console.log("DEBUG: Database INSERT result:", JSON.stringify(result));
-
-                return corsResponse(result, 201);
+                try {
+                    const result = await boundStatement.first();
+                    console.log("DEBUG: Database INSERT result:", JSON.stringify(result));
+                    return corsResponse(result, 201);
+                } catch (dbError) {
+                    console.error("Database error:", dbError);
+                    return corsResponse({ error: 'Database error' }, 500);
+                }
             } else if (path === '/api/posts' && method === 'GET') {
                 const authHeader = request.headers.get('Authorization');
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {

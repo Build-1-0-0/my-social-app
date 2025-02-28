@@ -128,6 +128,51 @@ export default {
                 const results = await db.prepare('SELECT id, username, content FROM posts ORDER BY id DESC').all();
                 const data = results.results;
                 return corsResponse(data);
+} else if (path === '/api/comments' && method === 'POST') {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return corsResponse({ error: 'Unauthorized' }, 401);
+    }
+    const token = authHeader.substring(7);
+    const isValid = await jwt.verify(token, jwtSecret);
+    if (!isValid) {
+        return corsResponse({ error: 'Unauthorized' }, 401);
+    }
+
+    let extractedUsername;
+    try {
+        const decodedToken = await jwt.decode(token, jwtSecret);
+        extractedUsername = decodedToken.payload.username;
+        if (extractedUsername === undefined) {
+            return corsResponse({ error: 'Unauthorized: Invalid token (missing username)' }, 401);
+        }
+    } catch (jwtError) {
+        return corsResponse({ error: 'Unauthorized: Invalid token' }, 401);
+    }
+
+    const { postId, content } = await request.json();
+
+    try {
+        const result = await db.prepare('INSERT INTO comments (postId, username, content) VALUES (?, ?, ?) RETURNING id, postId, username, content, timestamp').bind(postId, extractedUsername, content).first();
+        return corsResponse(result, 201);
+    } catch (dbError) {
+        console.error("Database error:", dbError);
+        return corsResponse({ error: 'Database error' }, 500);
+    }
+} else if (path === '/api/comments' && method === 'GET') {
+    const postId = url.searchParams.get('postId');
+    if (!postId) {
+        return corsResponse({ error: 'postId is required' }, 400);
+    }
+
+    try {
+        const results = await db.prepare('SELECT id, username, content, timestamp FROM comments WHERE postId = ? ORDER BY timestamp ASC').bind(postId).all();
+        const data = results.results;
+        return corsResponse(data);
+    } catch (dbError) {
+        console.error("Database error:", dbError);
+        return corsResponse({ error: 'Database error' }, 500);
+    }
             } else if (path === '/') {
                 return new Response('Welcome to my Cloudflare Worker!', {
                     headers: { 'Content-Type': 'text/plain' },

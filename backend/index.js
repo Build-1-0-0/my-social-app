@@ -50,7 +50,7 @@ export default {
                 if (user && await bcrypt.compare(password, user.password)) {
                     console.log("bcrypt compare success");
                     console.log(`User logged in: ${username}`);
-                    console.log("DEBUG: User.username before token generation:", user.username); // Added debug log here.
+                    console.log("DEBUG: User.username before token generation:", user.username);
                     const token = await jwt.sign({ username: user.username }, jwtSecret);
                     console.log("JWT Token Generated:", token);
                     return corsResponse({ message: 'Login successful', token });
@@ -73,11 +73,13 @@ export default {
                 return corsResponse(data);
             } else if (path === '/api/posts' && method === 'POST') {
                 const authHeader = request.headers.get('Authorization');
+                console.log("DEBUG: Authorization Header:", authHeader); // Added log
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
                 const token = authHeader.substring(7);
                 const isValid = await jwt.verify(token, jwtSecret);
+                console.log("DEBUG: jwt.verify result:", isValid); // Added log
                 if (!isValid) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }

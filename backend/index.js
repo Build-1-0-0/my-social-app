@@ -73,13 +73,13 @@ export default {
                 return corsResponse(data);
             } else if (path === '/api/posts' && method === 'POST') {
                 const authHeader = request.headers.get('Authorization');
-                console.log("DEBUG: Authorization Header:", authHeader); // Added log
+                console.log("DEBUG: Authorization Header:", authHeader);
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
                 const token = authHeader.substring(7);
                 const isValid = await jwt.verify(token, jwtSecret);
-                console.log("DEBUG: jwt.verify result:", isValid); // Added log
+                console.log("DEBUG: jwt.verify result:", isValid);
                 if (!isValid) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
@@ -87,6 +87,7 @@ export default {
                 let username;
                 try {
                     const decodedToken = await jwt.decode(token, jwtSecret);
+                    console.log("DEBUG: Decoded Token:", decodedToken); // Added log
                     username = decodedToken.username;
                     if (!username) {
                         console.error("JWT missing username claim");

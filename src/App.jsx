@@ -51,32 +51,33 @@ function App() {
     };
 
     const handleLogin = async (e) => {
-        e.preventDefault();
-        try {
-            const response = await fetch(`${apiUrl}api/users/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ username, password }),
-            });
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('username', data.username); // <----- Store username in localStorage on login!
-                setIsLoggedIn(true);
-                fetchPosts();
-                fetchData();
-                alert('Login successful');
-            } else {
-                const errorData = await response.json();
-                alert(`Login failed: ${errorData.error || 'Invalid credentials'}`);
-            }
-        } catch (error) {
-            console.error('Login error:', error);
-            alert('Login failed. Please check console for details.');
+    e.preventDefault();
+    try {
+        const response = await fetch(`${apiUrl}api/users/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+        });
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Login Data:', data); // <--- ADD THIS LINE HERE - VERY IMPORTANT!
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('username', data.username); // <----- Store username in localStorage on login!
+            setIsLoggedIn(true);
+            fetchPosts();
+            fetchData();
+            alert('Login successful');
+        } else {
+            const errorData = await response.json();
+            alert(`Login failed: ${errorData.error || 'Invalid credentials'}`);
         }
-    };
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed. Please check console for details.');
+    }
+};
 
     const handleLogout = () => {
         localStorage.removeItem('token');

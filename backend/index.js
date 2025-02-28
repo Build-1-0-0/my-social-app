@@ -46,10 +46,11 @@ export default {
                 console.log("Login Request:", JSON.stringify({ username, password }));
                 const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
                 console.log("Database User:", JSON.stringify(user));
+
                 if (user && await bcrypt.compare(password, user.password)) {
                     console.log("bcrypt compare success");
                     console.log(`User logged in: ${username}`);
-                    // Log the generated JWT token - for debugging
+                    console.log("DEBUG: User.username before token generation:", user.username); // Added debug log here.
                     const token = await jwt.sign({ username: user.username }, jwtSecret);
                     console.log("JWT Token Generated:", token);
                     return corsResponse({ message: 'Login successful', token });
@@ -102,7 +103,7 @@ export default {
 
                 const result = await db.prepare('INSERT INTO posts (username, content) VALUES (?, ?) RETURNING id, username, content').bind(username, content).first();
 
-                console.log("DEBUG: Database INSERT result:", JSON.stringify(result)); // Added logging for 'result'
+                console.log("DEBUG: Database INSERT result:", JSON.stringify(result));
 
                 return corsResponse(result, 201);
             } else if (path === '/api/posts' && method === 'GET') {

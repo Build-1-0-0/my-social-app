@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import './index.css'; // Assuming you have this for styling
-import { verifyToken } from './utils/jwtUtils'; // Assuming you have jwtUtils.js for token verification
+import './index.css';
+import { verifyToken } from './utils/jwtUtils';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your actual API URL
 
@@ -15,12 +15,12 @@ function App() {
     const [posts, setPosts] = useState([]);
     const [data, setData] = useState(null);
     const [comments, setComments] = useState({});
-    const [currentProfileUsername, setCurrentProfileUsername] = useState(null); // NEW STATE: To track username for profile view
-    const [profile, setProfile] = useState(null); // NEW STATE: To store fetched profile data
+    const [currentProfileUsername, setCurrentProfileUsername] = useState(null);
+    const [profile, setProfile] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (token && verifyToken(token)) { // Assume verifyToken function exists in utils/jwtUtils.js
+        if (token && verifyToken(token)) {
             setIsLoggedIn(true);
             fetchPosts();
             fetchData();
@@ -63,6 +63,7 @@ function App() {
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('token', data.token);
+                localStorage.setItem('username', data.username); // <----- Store username in localStorage on login!
                 setIsLoggedIn(true);
                 fetchPosts();
                 fetchData();
@@ -79,12 +80,13 @@ function App() {
 
     const handleLogout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('username'); // <----- Clear username from localStorage on logout
         setIsLoggedIn(false);
-        setData(null); // Clear data table on logout
-        setPosts([]);     // Clear posts on logout
-        setComments({});    // Clear comments on logout
-        setProfile(null);   // Clear profile data on logout
-        setCurrentProfileUsername(null); // Reset profile username
+        setData(null);
+        setPosts([]);
+        setComments({});
+        setProfile(null);
+        setCurrentProfileUsername(null);
         alert('Logged out successfully');
     };
 
@@ -105,7 +107,7 @@ function App() {
             });
             if (response.ok) {
                 setPostContent('');
-                fetchPosts(); // Refresh posts after posting
+                fetchPosts();
                 alert('Post created successfully!');
             } else {
                 const errorData = await response.json();
@@ -121,7 +123,7 @@ function App() {
         const token = localStorage.getItem('token');
         if (!token) {
             console.warn('No token found, or invalid token. Cannot fetch posts.');
-            return; // Exit early if no or invalid token
+            return;
         }
         try {
             const response = await fetch(`${apiUrl}api/posts`, {
@@ -134,7 +136,6 @@ function App() {
                 setPosts(postsData);
             } else {
                 console.error('Failed to fetch posts:', response.status, response.statusText);
-                // Optionally handle error, e.g., setPosts([]) or display an error message to the user
             }
         } catch (error) {
             console.error('Error fetching posts:', error);
@@ -179,9 +180,8 @@ function App() {
                 body: JSON.stringify({ postId: postId, content: content }),
             });
             if (response.ok) {
-                // Optimistically update comments or refetch
-                fetchComments(postId); // Refresh comments for this post
-                document.getElementById(`comment-input-${postId}`).value = ''; // Clear input
+                fetchComments(postId);
+                document.getElementById(`comment-input-${postId}`).value = '';
                 alert('Comment added successfully!');
             } else {
                 const errorData = await response.json();
@@ -207,38 +207,34 @@ function App() {
         }
     };
 
-    // ====================== NEW FUNCTION: fetchUserProfile ======================
     const fetchUserProfile = async (usernameToFetch) => {
         try {
             const response = await fetch(`${apiUrl}api/profile/${usernameToFetch}`);
             if (response.ok) {
                 const profileData = await response.json();
-                setProfile(profileData); // Store fetched profile data in state
-                setCurrentProfileUsername(usernameToFetch); // Track the username whose profile is being viewed
+                setProfile(profileData);
+                setCurrentProfileUsername(usernameToFetch);
             } else if (response.status === 404) {
                 alert('Profile not found.');
-                setProfile(null); // Clear profile if not found
-                setCurrentProfileUsername(usernameToFetch); // Still track the attempted username
+                setProfile(null);
+                setCurrentProfileUsername(usernameToFetch);
             } else {
                 const errorData = await response.json();
                 alert(`Failed to fetch profile: ${errorData.error || 'Unknown error'}`);
-                setProfile(null); // Clear profile on error
-                setCurrentProfileUsername(usernameToFetch); // Still track the attempted username
+                setProfile(null);
+                setCurrentProfileUsername(usernameToFetch);
             }
         } catch (error) {
             console.error('Error fetching profile:', error);
             alert('Failed to fetch profile. Check console for details.');
-            setProfile(null); // Clear profile on error
-            setCurrentProfileUsername(usernameToFetch); // Still track the attempted username
+            setProfile(null);
+            setCurrentProfileUsername(usernameToFetch);
         }
     };
-    // ====================== NEW FUNCTION: fetchUserProfile END ==================
 
-    // ====================== NEW FUNCTION: handleViewProfile =====================
     const handleViewProfile = (usernameToView) => {
-        fetchUserProfile(usernameToView); // Call fetchUserProfile when "View Profile" is clicked
+        fetchUserProfile(usernameToView);
     };
-    // ====================== NEW FUNCTION: handleViewProfile END =================
 
     return (
         <div className="container mx-auto p-4">
@@ -248,14 +244,12 @@ function App() {
                 <>
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Logout</button>
-                        {/* ====================== NEW: View Own Profile Button (Placeholder) ================= */}
                         <button
-                            onClick={() => handleViewProfile(localStorage.getItem('username'))} // Assuming you store username in localStorage on login
+                            onClick={() => handleViewProfile(localStorage.getItem('username'))}
                             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
                         >
                             View My Profile (Placeholder)
                         </button>
-                        {/* ====================== NEW: View Own Profile Button END ========================== */}
                     </div>
 
                     <div className="mb-4">
@@ -274,15 +268,12 @@ function App() {
                             {posts.map(post => (
                                 <div key={post.id} className="mb-4 p-4 border rounded">
                                     <p className="font-semibold">
-                                        {/* ====================== NEW: Link to View User Profile ====================== */}
                                         <a href="#" onClick={(e) => { e.preventDefault(); handleViewProfile(post.username); }} className="text-blue-500 hover:underline">
                                             {post.username}
                                         </a>
-                                        {/* ====================== NEW: Link to View User Profile END ================== */}
                                     </p>
                                     <p>{post.content}</p>
 
-                                    {/* Comments Section */}
                                     <div className="mt-2">
                                         <input
                                             type="text"
@@ -319,13 +310,11 @@ function App() {
                                 {data.map(item => (
                                     <tr key={item.id}>
                                         <td className="px-6 py-4 whitespace-nowrap">{item.id}</td>
-                                        {/* ====================== NEW: Link to View User Profile in Table ================= */}
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <a href="#" onClick={(e) => { e.preventDefault(); handleViewProfile(item.username); }} className="text-blue-500 hover:underline">
                                                 {item.username}
                                             </a>
                                         </td>
-                                        {/* ====================== NEW: Link to View User Profile in Table END ================== */}
                                         <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <button className="bg-blue-200 hover:bg-blue-300 text-blue-800 font-bold py-1 px-2 rounded mr-2">Edit</button>
@@ -337,7 +326,6 @@ function App() {
                         </table>
                     )}
 
-                    {/* ====================== NEW SECTION: Profile Display ========================== */}
                     {profile && currentProfileUsername && (
                         <div className="mt-8 p-4 border rounded">
                             <h2 className="text-xl font-semibold mb-2">Profile of {currentProfileUsername}</h2>
@@ -350,17 +338,14 @@ function App() {
                                     <img src={profile.profilePictureUrl} alt={`${profile.username}'s Profile`} className="mt-2 max-w-xs rounded-full" />
                                 </div>
                             )}
-                            {/* ====================== NEW: Edit Profile Button (Placeholder) ================= */}
                             <button
-                                onClick={() => alert('Edit profile functionality will be implemented next!')} // Placeholder action
+                                onClick={() => alert('Edit profile functionality will be implemented next!')}
                                 className="mt-4 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
                             >
                                 Edit Profile (Placeholder)
                             </button>
-                            {/* ====================== NEW: Edit Profile Button END ========================== */}
                         </div>
                     )}
-                    {/* ====================== NEW SECTION: Profile Display END ====================== */}
 
                 </>
             ) : (

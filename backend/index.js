@@ -88,8 +88,8 @@ export default {
                 try {
                     const decodedToken = await jwt.decode(token, jwtSecret);
                     console.log("DEBUG: Decoded Token:", decodedToken);
-                    console.log("DEBUG: typeof extractedUsername:", typeof decodedToken.username);
-                    extractedUsername = decodedToken.username;
+                    console.log("DEBUG: typeof extractedUsername:", typeof decodedToken.payload.username);
+                    extractedUsername = decodedToken.payload.username;
                     if (extractedUsername === undefined) {
                         console.error("JWT missing username claim");
                         return corsResponse({ error: 'Unauthorized: Invalid token (missing username)' }, 401);

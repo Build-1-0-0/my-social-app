@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import './index.css';
 import { verifyToken } from './utils/jwtUtils';
@@ -15,8 +16,7 @@ function App() {
     const [posts, setPosts] = useState([]);
     const [data, setData] = useState(null);
     const [comments, setComments] = useState({});
-    const [currentProfileUsername, setCurrentProfileUsername] = useState(null);
-    const [profile, setProfile] = useState(null);
+
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -86,8 +86,6 @@ function App() {
         setData(null);
         setPosts([]);
         setComments({});
-        setProfile(null);
-        setCurrentProfileUsername(null);
         alert('Logged out successfully');
     };
 
@@ -208,34 +206,6 @@ function App() {
         }
     };
 
-    const fetchUserProfile = async (usernameToFetch) => {
-        try {
-            const response = await fetch(`${apiUrl}api/profile/${usernameToFetch}`);
-            if (response.ok) {
-                const profileData = await response.json();
-                setProfile(profileData);
-                setCurrentProfileUsername(usernameToFetch);
-            } else if (response.status === 404) {
-                alert('Profile not found.');
-                setProfile(null);
-                setCurrentProfileUsername(usernameToFetch);
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to fetch profile: ${errorData.error || 'Unknown error'}`);
-                setProfile(null);
-                setCurrentProfileUsername(usernameToFetch);
-            }
-        } catch (error) {
-            console.error('Error fetching profile:', error);
-            alert('Failed to fetch profile. Check console for details.');
-            setProfile(null);
-            setCurrentProfileUsername(usernameToFetch);
-        }
-    };
-
-    const handleViewProfile = (usernameToView) => {
-        fetchUserProfile(usernameToView);
-    };
 
     return (
         <div className="container mx-auto p-4">
@@ -245,12 +215,11 @@ function App() {
                 <>
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Logout</button>
-                        <button
-                            onClick={() => handleViewProfile(localStorage.getItem('username'))}
-                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                        >
-                            View My Profile (Placeholder)
-                        </button>
+                        <Link to={`/profile/${localStorage.getItem('username')}`}>
+    <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        View My Profile (Placeholder)
+    </button>
+</Link>
                     </div>
 
                     <div className="mb-4">
@@ -269,7 +238,7 @@ function App() {
                             {posts.map(post => (
                                 <div key={post.id} className="mb-4 p-4 border rounded">
                                     <p className="font-semibold">
-                                        <a href="#" onClick={(e) => { e.preventDefault(); handleViewProfile(post.username); }} className="text-blue-500 hover:underline">
+                                        <a href="#" onClick={(e) => { e.preventDefault(); }} className="text-blue-500 hover:underline">
                                             {post.username}
                                         </a>
                                     </p>
@@ -312,7 +281,7 @@ function App() {
                                     <tr key={item.id}>
                                         <td className="px-6 py-4 whitespace-nowrap">{item.id}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <a href="#" onClick={(e) => { e.preventDefault(); handleViewProfile(item.username); }} className="text-blue-500 hover:underline">
+                                            <a href="#" onClick={(e) => { e.preventDefault(); }} className="text-blue-500 hover:underline">
                                                 {item.username}
                                             </a>
                                         </td>
@@ -325,27 +294,6 @@ function App() {
                                 ))}
                             </tbody>
                         </table>
-                    )}
-
-                    {profile && currentProfileUsername && (
-                        <div className="mt-8 p-4 border rounded">
-                            <h2 className="text-xl font-semibold mb-2">Profile of {currentProfileUsername}</h2>
-                            <p><strong>Username:</strong> {profile.username}</p>
-                            <p><strong>Email:</strong> {profile.email}</p>
-                            {profile.bio && <p><strong>Bio:</strong> {profile.bio}</p>}
-                            {profile.profilePictureUrl && (
-                                <div>
-                                    <strong>Profile Picture:</strong><br />
-                                    <img src={profile.profilePictureUrl} alt={`${profile.username}'s Profile`} className="mt-2 max-w-xs rounded-full" />
-                                </div>
-                            )}
-                            <button
-                                onClick={() => alert('Edit profile functionality will be implemented next!')}
-                                className="mt-4 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-                            >
-                                Edit Profile (Placeholder)
-                            </button>
-                        </div>
                     )}
 
                 </>

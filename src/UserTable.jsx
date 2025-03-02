@@ -2,14 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom'; // Import Link
 
 function UserTable({ data }) { // Receive 'data' as a prop
-    console.log("UserTable data prop:", data); // <--- ADDED: Debug log to inspect 'data'
+    console.log("UserTable data prop:", data);
 
-    if (!data || !Array.isArray(data) || data.length === 0) { // <--- Enhanced null/empty check
-        return <p>No user data available.</p>; // Or a more informative message like "Loading user data..." or simply return null
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        return <p>No user data available.</p>;
     }
     return (
         <div>
-            {data && data.length > 0 ? ( // <---- UPDATED: Conditional rendering with ternary operator
+            {data && data.length > 0 ? (
                 <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                         <tr>
@@ -17,7 +17,7 @@ function UserTable({ data }) { // Receive 'data' as a prop
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
+                        </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {data.map(item => (
@@ -36,13 +36,10 @@ function UserTable({ data }) { // Receive 'data' as a prop
                             </tr>
                         ))}
                     </tbody>
-                {data && data.length > 0 ? (
-    <table className="min-w-full divide-y divide-gray-200">
-        {/* ... table content ... */}
-    </table>
-) : (
-    <p>No user data available.</p>
-)}
+                </table>
+            ) : (
+                <p>No user data available.</p>
+            )}
         </div>
     );
 }

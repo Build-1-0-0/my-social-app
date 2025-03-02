@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import { verifyToken } from './utils/jwtUtils';
 import { Link, BrowserRouter, Routes, Route } from 'react-router-dom'; // All react-router-dom imports together
-import PostList from './PostList';
-import UserTable from './UserTable';
-import Profile from './Profile'; // Import Profile component
+import PostList from './components/PostList'; // Ensure path is correct
+import UserTable from './components/UserTable'; // Ensure path is correct
+import ProfilePage from './components/ProfilePage'; // Ensure path is correct, using ProfilePage to be consistent with our previous steps
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your actual API URL
 
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [username, setUsername] = useState('');
+    const [username, setUsername] = useState(''); // You might not be using this state anymore as username is in localStorage
     const [password, setPassword] = useState('');
     const [registerUsername, setRegisterUsername] = useState('');
     const [registerEmail, setRegisterEmail] = useState('');
@@ -19,7 +19,6 @@ function App() {
     const [posts, setPosts] = useState([]);
     const [data, setData] = useState(null);
     const [comments, setComments] = useState({});
-
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -54,37 +53,37 @@ function App() {
     };
 
     const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-        const response = await fetch(`${apiUrl}api/users/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ username, password }),
-        });
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Login Data:', data); // <--- ADD THIS LINE HERE - VERY IMPORTANT!
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('username', data.username); // <----- Store username in localStorage on login!
-            setIsLoggedIn(true);
-            fetchPosts();
-            fetchData();
-            alert('Login successful');
-        } else {
-            const errorData = await response.json();
-            alert(`Login failed: ${errorData.error || 'Invalid credentials'}`);
+        e.preventDefault();
+        try {
+            const response = await fetch(`${apiUrl}api/users/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password }),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Login Data:', data);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('username', data.username); // Store username in localStorage on login!
+                setIsLoggedIn(true);
+                fetchPosts();
+                fetchData();
+                alert('Login successful');
+            } else {
+                const errorData = await response.json();
+                alert(`Login failed: ${errorData.error || 'Invalid credentials'}`);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Login failed. Please check console for details.');
         }
-    } catch (error) {
-        console.error('Login error:', error);
-        alert('Login failed. Please check console for details.');
-    }
-};
+    };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('username'); // <----- Clear username from localStorage on logout
+        localStorage.removeItem('username'); // Clear username from localStorage on logout
         setIsLoggedIn(false);
         setData(null);
         setPosts([]);
@@ -143,7 +142,6 @@ function App() {
             console.error('Error fetching posts:', error);
         }
     };
-
 
     const fetchData = async () => {
         const token = localStorage.getItem('token');
@@ -209,46 +207,59 @@ function App() {
         }
     };
 
-
     return (
-    <BrowserRouter>
-        <div className="container mx-auto p-4">
-            <h1 className="text-2xl font-bold mb-4">Social Media App</h1>
+        <BrowserRouter>
+            <div className="container mx-auto p-4">
+                <h1 className="text-2xl font-bold mb-4 text-center">Social Media App</h1>
 
-            {isLoggedIn ? (
-                <>
-                    {/* ... your logged-in UI (Logout button, Post creation, PostList, UserTable) ... */}
-                    <div className="flex justify-between items-center mb-4">
-                        <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Logout</button>
-                        <Link to={`/profile/${localStorage.getItem('username')}`}>
-                            <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                View My Profile (Placeholder)
-                            </button>
-                        </Link>
+                {isLoggedIn ? (
+                    <>
+                        <div className="flex justify-between items-center mb-4">
+                            <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Logout</button>
+                            <Link to={`/profile/${localStorage.getItem('username')}`}>
+                                <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                    View My Profile (Placeholder)
+                                </button>
+                            </Link>
+                        </div>
+
+                        <div className="mb-4">
+                            {/* ... Post creation textarea and button ... You can add this later in PostList component or here */}
+                        </div>
+
+                        <Routes> {/*  PUT <Routes> INSIDE THE isLoggedIn BLOCK */}
+                            <Route path="/" element={<PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} />} /> {/* Homepage now renders PostList */}
+                            <Route path="/profile/:username" element={<ProfilePage />} /> {/* Profile route Renders ProfilePage */}
+                        </Routes>
+                        <UserTable data={data} /> {/* You can decide where to render UserTable, perhaps on a separate route later */}
+
+
+                    </>
+                ) : (
+                    <div className="flex flex-col md:flex-row gap-4">
+                        {/* ... your login and register forms ... You can keep these forms as they are */}
+                        <form onSubmit={handleRegister} className="mb-4">
+                            <h2 className="text-xl font-semibold mb-2">Register</h2>
+                            <input type="text" placeholder="Username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" value={registerUsername} onChange={e => setRegisterUsername(e.target.value)} required />
+                            <input type="email" placeholder="Email" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} required />
+                            <input type="password" placeholder="Password" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} required />
+                            <button type="submit" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Register</button>
+                        </form>
+
+                        <form onSubmit={handleLogin}>
+                            <h2 className="text-xl font-semibold mb-2">Login</h2>
+                            <input type="text" placeholder="Username" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" value={username} onChange={e => setUsername(e.target.value)} required />
+                            <input type="password" placeholder="Password" className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" value={password} onChange={e => setPassword(e.target.value)} required />
+                            <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Login</button>
+                        </form>
                     </div>
+                )}
 
-                    <div className="mb-4">
-                        {/* ... Post creation textarea and button ... */}
-                    </div>
+                {/*  REMOVED DUPLICATE <Routes> BLOCK */}
 
-                    <PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} />
-                    <UserTable data={data} />
-
-                </>
-            ) : (
-                <div className="flex flex-col md:flex-row gap-4">
-                    {/* ... your login and register forms ... */}
-                </div>
-            )}
-
-            {/*  ADD THE <Routes> AND <Route> HERE, OUTSIDE isLoggedIn BLOCK */}
-            <Routes>
-                <Route path="/profile/:username" element={<Profile />} />
-            </Routes>
-
-        </div>
-    </BrowserRouter>
-);
+            </div>
+        </BrowserRouter>
+    );
 }
 
 export default App;

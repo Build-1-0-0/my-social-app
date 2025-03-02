@@ -145,24 +145,6 @@ function App() {
 
     const fetchData = async () => {
         const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const response = await fetch(`${apiUrl}api/data`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    setData(data);
-                } else {
-                    console.error('Failed to fetch data:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-            }
-        }
-    };
 
     const createComment = async (postId, content) => {
         const token = localStorage.getItem('token');

@@ -4,29 +4,31 @@ const PostList = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // <-----  RIGHT HERE! Define apiUrl here
+
   useEffect(() => {
     const fetchPosts = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+      const token = localStorage.getItem('token');
+      if (!token) {
         console.warn('No token found, or invalid token. Cannot fetch posts.');
         return;
-    }
-    try {
+      }
+      try {
         const response = await fetch(`${apiUrl}api/posts`, {
-            headers: {
-                'Authorization': `Bearer ${token}`, // <---  CHECK THIS LINE VERY CAREFULLY!
-            }
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          }
         });
         if (response.ok) {
-            const postsData = await response.json();
-            setPosts(postsData);
+          const postsData = await response.json();
+          setPosts(postsData);
         } else {
-            console.error('Failed to fetch posts:', response.status, response.statusText);
+          console.error('Failed to fetch posts:', response.status, response.statusText);
         }
-    } catch (error) {
+      } catch (error) {
         console.error('Error fetching posts:', error);
-    }
-};
+      }
+    };
 
     fetchPosts();
   }, []);

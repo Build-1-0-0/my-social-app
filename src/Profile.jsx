@@ -53,3 +53,20 @@ function Profile() {
             <p><strong>Username:</strong> {profile.username}</p>
             <p><strong>Email:</strong> {profile.email}</p>
             {profile.bio && <p><strong>Bio:</strong> {profile.bio}</p>}
+            {profile.profilePictureUrl && (
+                <div>
+                    <strong>Profile Picture:</strong><br />
+                    <img src={profile.profilePictureUrl} alt={`${profile.username}'s Profile`} className="mt-2 max-w-xs rounded-full" />
+                </div>
+            )}
+            <button
+                onClick={() => alert('Edit profile functionality will be implemented next!')}
+                className="mt-4 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
+            >
+                Edit Profile (Placeholder)
+            </button>
+        </div>  {/* <-- Closing div for the main container div */}
+    );
+}
+
+export default Profile;

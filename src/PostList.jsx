@@ -6,20 +6,27 @@ const PostList = () => {
 
   useEffect(() => {
     const fetchPosts = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`https://my-worker.africancontent807.workers.dev/api/posts`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+    const token = localStorage.getItem('token');
+    if (!token) {
+        console.warn('No token found, or invalid token. Cannot fetch posts.');
+        return;
+    }
+    try {
+        const response = await fetch(`${apiUrl}api/posts`, {
+            headers: {
+                'Authorization': `Bearer ${token}`, // <---  CHECK THIS LINE VERY CAREFULLY!
+            }
+        });
+        if (response.ok) {
+            const postsData = await response.json();
+            setPosts(postsData);
+        } else {
+            console.error('Failed to fetch posts:', response.status, response.statusText);
         }
-        const json = await response.json();
-        setPosts(json);
-      } catch (error) {
-        console.error("Fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    } catch (error) {
+        console.error('Error fetching posts:', error);
+    }
+};
 
     fetchPosts();
   }, []);

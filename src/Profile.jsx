@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom'; // Import useParams
 const ProfilePage = () => {
   const { username } = useParams(); // Get the username from the URL parameter
   // *** CORRECTED apiUrl - using template literals to build the API endpoint URL ***
-  const apiUrl = `https://my-worker.africancontent807.workers.dev/api/profile;
+  const apiUrl = `https://my-worker.africancontent807.workers.dev/api/profile/${username}`;
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);

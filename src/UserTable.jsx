@@ -36,10 +36,13 @@ function UserTable({ data }) { // Receive 'data' as a prop
                             </tr>
                         ))}
                     </tbody>
-                </table>
-            ) : (
-                <p>No user data available.</p> // Or message to show when data is empty/null - same as what's returned before
-            )}
+                {data && data.length > 0 ? (
+    <table className="min-w-full divide-y divide-gray-200">
+        {/* ... table content ... */}
+    </table>
+) : (
+    <p>No user data available.</p>
+)}
         </div>
     );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom'; // Import useParams
 
-const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your actual API URL
+const apiUrl = 'https://my-worker.africancontent807.workers.dev/api/profile/:username; // Replace with your actual API URL
 
 function Profile() {
     const { username } = useParams(); // Get username from URL params

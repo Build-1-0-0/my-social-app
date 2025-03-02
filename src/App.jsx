@@ -143,9 +143,6 @@ function App() {
         }
     };
 
-    const fetchData = async () => {
-        const token = localStorage.getItem('token');
-
     const createComment = async (postId, content) => {
         const token = localStorage.getItem('token');
         if (!token) {

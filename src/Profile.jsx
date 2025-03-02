@@ -14,7 +14,7 @@ function Profile() {
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch(`<span class="math-inline">\{apiUrl\}api/profile/</span>{username}`);
+                const response = await fetch(`https://my-worker.africancontent807.workers.dev/api/profile/${username}`);
                 if (response.ok) {
                     const profileData = await response.json();
                     setProfile(profileData);

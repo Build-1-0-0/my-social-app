@@ -89,7 +89,8 @@ export default {
                 }
                 const token = authHeader.substring(7);
                 const isValid = await jwt.verify(token, jwtSecret);
-                console.log("DEBUG: jwt.verify result:", isValid);
+                console.log("DEBUG: jwtSecret in /api/posts (verification):", jwtSecret);
+    const isValid = await jwt.verify(token, jwtSecret);
                 if (!isValid) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }

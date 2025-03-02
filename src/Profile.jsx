@@ -65,7 +65,7 @@ function Profile() {
             >
                 Edit Profile (Placeholder)
             </button>
-        </div>  {/* <-- Closing div for the main container div */}
+        </div>
     );
 }
 

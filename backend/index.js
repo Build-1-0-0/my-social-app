@@ -52,24 +52,37 @@ export default {
                 return corsResponse({ message: 'User registered successfully' }, 201);
 
             } else if (path === '/api/users/login' && method === 'POST') {
-    const { username, password } = await request.json();
-    console.log("Login Request:", JSON.stringify({ username, password }));
-    const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
-    console.log("Database User:", JSON.stringify(user));
+                const { username, password } = await request.json();
+                console.log("Login Request:", JSON.stringify({ username, password }));
+                const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+                console.log("Database User:", JSON.stringify(user));
 
-    if (user && await bcrypt.compare(password, user.password)) {
-        console.log("bcrypt compare success");
-        console.log(`User logged in: ${username}`);
-        console.log("DEBUG: jwtSecret in /api/login:", jwtSecret); // <---- DEBUG LOG: JWT SECRET IN LOGIN
-        const token = await jwt.sign({ username: user.username }, jwtSecret);
-        console.log("JWT Token Generated:", token);
-        return corsResponse({ message: 'Login successful', token, username: user.username });
-    } else {
-        console.log("bcrypt compare failed");
-        return corsResponse({ error: 'Invalid username or password' }, 401);
-    }
-}
-                let extractedUsername;
+                if (user && await bcrypt.compare(password, user.password)) {
+                    console.log("bcrypt compare success");
+                    console.log(`User logged in: ${username}`);
+                    console.log("DEBUG: jwtSecret in /api/login:", jwtSecret); // <---- DEBUG LOG: JWT SECRET IN LOGIN
+                    const token = await jwt.sign({ username: user.username }, jwtSecret);
+                    console.log("JWT Token Generated:", token);
+                    return corsResponse({ message: 'Login successful', token, username: user.username });
+                } else {
+                    console.log("bcrypt compare failed");
+                    return corsResponse({ error: 'Invalid username or password' }, 401);
+                }
+            } else if (path === '/api/posts' && method === 'POST') { // <---- /api/posts POST is now correctly in the chain
+                const authHeader = request.headers.get('Authorization');
+                console.log("DEBUG: Authorization Header:", authHeader);
+                if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                    return corsResponse({ error: 'Unauthorized' }, 401);
+                }
+                const token = authHeader.substring(7);
+                const isValid = await jwt.verify(token, jwtSecret);
+                console.log("DEBUG: jwtSecret in /api/posts (verification):", jwtSecret);
+
+                if (!isValid) {
+                    return corsResponse({ error: 'Unauthorized' }, 401);
+                }
+
+                let extractedUsername; // <---- 'extractedUsername' and try/catch are now inside /api/posts POST where they are used.
                 try {
                     const decodedToken = await jwt.decode(token, jwtSecret);
                     console.log("DEBUG: Decoded Token:", decodedToken);
@@ -100,7 +113,7 @@ export default {
                     console.error("Database error:", dbError);
                     return corsResponse({ error: 'Database error' }, 500);
                 }
-            } else if (path === '/api/posts' && method === 'GET') {
+            } else if (path === '/api/posts' && method === 'GET') { // <---- /api/posts GET is now correctly in the chain
                 const authHeader = request.headers.get('Authorization');
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
@@ -113,7 +126,7 @@ export default {
                 const results = await db.prepare('SELECT id, username, content FROM posts ORDER BY id DESC').all();
                 const data = results.results;
                 return corsResponse(data);
-            } else if (path === '/api/comments' && method === 'POST') {
+            } else if (path === '/api/comments' && method === 'POST') { // <---- /api/comments POST is now correctly in the chain
                 const authHeader = request.headers.get('Authorization');
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
@@ -124,7 +137,7 @@ export default {
                     return corsResponse({ error: 'Unauthorized' }, 401);
                 }
 
-                let extractedUsername;
+                let extractedUsername; // <---- 'extractedUsername' and try/catch are now inside /api/comments POST where they are used.
                 try {
                     const decodedToken = await jwt.decode(token, jwtSecret);
                     extractedUsername = decodedToken.payload.username;
@@ -144,7 +157,7 @@ export default {
                     console.error("Database error:", dbError);
                     return corsResponse({ error: 'Database error' }, 500);
                 }
-            } else if (path === '/api/comments' && method === 'GET') {
+            } else if (path === '/api/comments' && method === 'GET') { // <---- /api/comments GET is now correctly in the chain
                 const postId = url.searchParams.get('postId');
                 if (!postId) {
                     return corsResponse({ error: 'postId is required' }, 400);
@@ -158,7 +171,7 @@ export default {
                     console.error("Database error:", dbError);
                     return corsResponse({ error: 'Database error' }, 500);
                 }
-            } else if (path.startsWith('/api/profile/') && method === 'GET') { // <--- Profile Endpoint - DATABASE QUERY RE-INTEGRATED HERE!
+            } else if (path.startsWith('/api/profile/') && method === 'GET') { // <--- Profile Endpoint is now correctly in the chain
                 const username = path.split('/').pop();
                 console.log(`Fetching profile for username: ${username}`);
 
@@ -170,7 +183,7 @@ export default {
                     console.log(`Profile not found for username: ${username}`);
                     return corsResponse({ error: 'Profile not found' }, 404);
                 }
-            } else {
+            } else { // <---- The final 'else' for 'Not found' is correctly at the end of the chain
                 return corsResponse({ message: 'Not found' }, 404);
             }
 

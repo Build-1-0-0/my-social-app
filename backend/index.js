@@ -184,28 +184,24 @@ export default {
                     return corsResponse({ error: 'Database error' }, 500);
                 }
             } else if (path.startsWith('/api/profile/') && method === 'GET') { // <--- Profile Endpoint
-                const username = path.split('/').pop();
-                console.log(`Fetching profile for username: ${username}`);
+    const username = path.split('/').pop();
+    console.log(`Fetching profile for username: ${username}`);
 
-                const userProfile = await db.prepare('SELECT username, email, bio, profilePictureUrl FROM users WHERE username = ?').bind(username).first();
+    // ***  HARDCODED JSON RESPONSE FOR TESTING - REPLACE ENTIRE BLOCK WITH THIS ***
+    const hardcodedProfileData = {
+        username: "testuser_HARDCODED",
+        email: "testuser_HARDCODED@example.com",
+        message: "This is a hardcoded JSON response for testing!"
+    };
+    return corsResponse(hardcodedProfileData);
 
-                if (userProfile) {
-                    console.log(`Profile found for username: ${username}`, JSON.stringify(userProfile));
-                    return corsResponse(userProfile);
-                } else {
-                    console.log(`Profile not found for username: ${username}`);
-                    return corsResponse({ error: 'Profile not found' }, 404);
-                }
-            } else if (path === '/') {
-                return new Response('Welcome to my Cloudflare Worker!', {
-                    headers: { 'Content-Type': 'text/plain' },
-                });
-            } else {
-                return new Response('Not Found', { status: 404 });
-            }
-        } catch (err) {
-            console.error(`Worker error: ${err.message}`, err);
-            return corsResponse({ error: err.message }, 500);
-        }
-    },
+    // *** COMMENT OUT OR DELETE THE ORIGINAL DATABASE FETCHING CODE (BELOW) ***
+    // const userProfile = await db.prepare('SELECT username, email, bio, profilePictureUrl FROM users WHERE username = ?').bind(username).first();
+    // if (userProfile) {
+    //     console.log(`Profile found for username: ${username}`, JSON.stringify(userProfile));
+    //     return corsResponse(userProfile);
+    // } else {
+    //     console.log(`Profile not found for username: ${username}`);
+    //     return corsResponse({ error: 'Profile not found' }, 404);
+    // }
 };

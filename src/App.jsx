@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import { verifyToken } from './utils/jwtUtils';
 import { Link, BrowserRouter, Routes, Route } from 'react-router-dom'; // All react-router-dom imports together
-import PostList from './components/PostList'; // Ensure path is correct
-import UserTable from './components/UserTable'; // Ensure path is correct
-import ProfilePage from './components/ProfilePage'; // Ensure path is correct, using ProfilePage to be consistent with our previous steps
+import PostList from './PostList'; // Ensure path is correct
+import UserTable from './UserTable'; // Ensure path is correct
+import ProfilePage from './ProfilePage'; // Ensure path is correct, using ProfilePage to be consistent with our previous steps
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your actual API URL
 

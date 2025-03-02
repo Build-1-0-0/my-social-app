@@ -1,72 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom'; // Import useParams
 
-const apiUrl = 'https://my-worker.africancontent807.workers.dev/api/profile/:username; // Replace with your actual API URL
+const ProfilePage = () => {
+  const { username } = useParams(); // Get the username from the URL parameter
+  // *** CORRECTED apiUrl - using template literals to build the API endpoint URL ***
+  const apiUrl = `https://my-worker.africancontent807.workers.dev/api/profile/${username}`;
 
-function Profile() {
-    const { username } = useParams(); // Get username from URL params
-    const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchUserProfile = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const response = await fetch(`https://my-worker.africancontent807.workers.dev/api/profile/${username}`);
-                if (response.ok) {
-                    const profileData = await response.json();
-                    setProfile(profileData);
-                } else if (response.status === 404) {
-                    setError('Profile not found');
-                } else {
-                    const errorData = await response.json();
-                    setError(`Failed to fetch profile: ${errorData.error || 'Unknown error'}`);
-                }
-            } catch (err) {
-                setError('Failed to fetch profile. Please check console for details.');
-                console.error('Error fetching profile:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(apiUrl); // <--- Using the CORRECTED apiUrl here
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const json = await response.json();
+        setProfile(json);
+      } catch (e) {
+        setError(e);
+        setProfile(null); // Clear profile data on error
+        console.error("Fetch error:", e); // Log detailed error to console
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        fetchUserProfile();
-    }, [username]); // useEffect dependency on username from URL
+    fetchProfile();
+  }, [username]); // useEffect dependency on username
 
-    if (loading) {
-        return <p>Loading profile...</p>;
-    }
+  if (loading) {
+    return <p>Loading profile...</p>;
+  }
 
-    if (error) {
-        return <p>Error: {error}</p>;
-    }
+  if (error) {
+    return <p>Error loading profile: {error.message}</p>;
+  }
 
-    if (!profile) {
-        return null; // Or a message like "Profile not found"
-    }
+  if (!profile) {
+    return <p>Profile not found.</p>;
+  }
 
-    return (
-        <div className="mt-8 p-4 border rounded">
-            <h2 className="text-xl font-semibold mb-2">Profile of {profile.username}</h2>
-            <p><strong>Username:</strong> {profile.username}</p>
-            <p><strong>Email:</strong> {profile.email}</p>
-            {profile.bio && <p><strong>Bio:</strong> {profile.bio}</p>}
-            {profile.profilePictureUrl && (
-                <div>
-                    <strong>Profile Picture:</strong><br />
-                    <img src={profile.profilePictureUrl} alt={`${profile.username}'s Profile`} className="mt-2 max-w-xs rounded-full" />
-                </div>
-            )}
-            <button
-                onClick={() => alert('Edit profile functionality will be implemented next!')}
-                className="mt-4 bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-            >
-                Edit Profile (Placeholder)
-            </button>
-        </div>
-    );
-}
+  return (
+    <div>
+      <h1>Social Media App</h1>
+      <h2>Profile of {profile.username}</h2>
+      <p>Username: {profile.username}</p>
+      <p>Email: {profile.email}</p>
+      {/* ... display other profile information ... */}
+      <p><a href="/profile/edit">Edit Profile (Placeholder)</a></p>
+      <p><a href="/">https://my-social-app.pages.dev/profile/{profile.username} from this page</a></p>
+    </div>
+  );
+};
 
-export default Profile;
+export default ProfilePage;

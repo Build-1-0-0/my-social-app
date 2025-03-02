@@ -52,49 +52,23 @@ export default {
                 return corsResponse({ message: 'User registered successfully' }, 201);
 
             } else if (path === '/api/users/login' && method === 'POST') {
-                const { username, password } = await request.json();
-                console.log("Login Request:", JSON.stringify({ username, password }));
-                const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
-                console.log("Database User:", JSON.stringify(user));
+    const { username, password } = await request.json();
+    console.log("Login Request:", JSON.stringify({ username, password }));
+    const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
+    console.log("Database User:", JSON.stringify(user));
 
-                    if (user && await bcrypt.compare(password, user.password)) {
+    if (user && await bcrypt.compare(password, user.password)) {
         console.log("bcrypt compare success");
         console.log(`User logged in: ${username}`);
-        console.log("DEBUG: jwtSecret in /api/login:", jwtSecret); // <---- ADD THIS LINE
+        console.log("DEBUG: jwtSecret in /api/login:", jwtSecret); // <---- DEBUG LOG: JWT SECRET IN LOGIN
         const token = await jwt.sign({ username: user.username }, jwtSecret);
-                    console.log("JWT Token Generated:", token);
-                    return corsResponse({ message: 'Login successful', token, username: user.username }); // <--- Return username in login response
-                } else {
-                    console.log("bcrypt compare failed");
-                    return corsResponse({ error: 'Invalid username or password' }, 401);
-                }
-            } else if (path === '/api/data' && method === 'GET') {
-                const authHeader = request.headers.get('Authorization');
-                if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                    return corsResponse({ error: 'Unauthorized' }, 401);
-                }
-                const token = authHeader.substring(7);
-                const isValid = await jwt.verify(token, jwtSecret);
-                if (!isValid) {
-                    return corsResponse({ error: 'Unauthorized' }, 401);
-                }
-                const results = await db.prepare('SELECT id, username, email FROM users').all();
-                const data = results.results;
-                return corsResponse(data);
-            } else if (path === '/api/posts' && method === 'POST') {
-                const authHeader = request.headers.get('Authorization');
-                console.log("DEBUG: Authorization Header:", authHeader);
-                if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                    return corsResponse({ error: 'Unauthorized' }, 401);
-                }
-                const token = authHeader.substring(7);
-                const isValid = await jwt.verify(token, jwtSecret);
-                console.log("DEBUG: jwtSecret in /api/posts (verification):", jwtSecret);
-    const isValid = await jwt.verify(token, jwtSecret);
-                if (!isValid) {
-                    return corsResponse({ error: 'Unauthorized' }, 401);
-                }
-
+        console.log("JWT Token Generated:", token);
+        return corsResponse({ message: 'Login successful', token, username: user.username });
+    } else {
+        console.log("bcrypt compare failed");
+        return corsResponse({ error: 'Invalid username or password' }, 401);
+    }
+}
                 let extractedUsername;
                 try {
                     const decodedToken = await jwt.decode(token, jwtSecret);

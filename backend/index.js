@@ -57,11 +57,11 @@ export default {
                 const user = await db.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
                 console.log("Database User:", JSON.stringify(user));
 
-                if (user && await bcrypt.compare(password, user.password)) {
-                    console.log("bcrypt compare success");
-                    console.log(`User logged in: ${username}`);
-                    console.log("DEBUG: User.username before token generation:", user.username);
-                    const token = await jwt.sign({ username: user.username }, jwtSecret);
+                    if (user && await bcrypt.compare(password, user.password)) {
+        console.log("bcrypt compare success");
+        console.log(`User logged in: ${username}`);
+        console.log("DEBUG: jwtSecret in /api/login:", jwtSecret); // <---- ADD THIS LINE
+        const token = await jwt.sign({ username: user.username }, jwtSecret);
                     console.log("JWT Token Generated:", token);
                     return corsResponse({ message: 'Login successful', token, username: user.username }); // <--- Return username in login response
                 } else {

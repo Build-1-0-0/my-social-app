@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import './index.css';
 import { verifyToken } from './utils/jwtUtils';
+import { Link, BrowserRouter, Routes, Route } from 'react-router-dom'; // All react-router-dom imports together
 import PostList from './PostList';
 import UserTable from './UserTable';
+import Profile from './Profile'; // Import Profile component
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your actual API URL
 
@@ -210,58 +211,44 @@ function App() {
 
 
     return (
+    <BrowserRouter>
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold mb-4">Social Media App</h1>
 
             {isLoggedIn ? (
                 <>
+                    {/* ... your logged-in UI (Logout button, Post creation, PostList, UserTable) ... */}
                     <div className="flex justify-between items-center mb-4">
                         <button onClick={handleLogout} className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Logout</button>
                         <Link to={`/profile/${localStorage.getItem('username')}`}>
-    <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-        View My Profile (Placeholder)
-    </button>
-</Link>
+                            <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                View My Profile (Placeholder)
+                            </button>
+                        </Link>
                     </div>
 
                     <div className="mb-4">
-                        <textarea
-                            value={postContent}
-                            onChange={(e) => setPostContent(e.target.value)}
-                            placeholder="Write a post..."
-                            className="border p-2 w-full"
-                        />
-                        <button onClick={handleCreatePost} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Post</button>
+                        {/* ... Post creation textarea and button ... */}
                     </div>
 
                     <PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} />
-
-                    import React from 'react';
-javascript
-<UserTable data={data} />
-                    )}
+                    <UserTable data={data} />
 
                 </>
             ) : (
                 <div className="flex flex-col md:flex-row gap-4">
-                    <form onSubmit={handleRegister} className="mb-4 md:w-1/2 p-4 border rounded">
-                        <h2 className="text-xl font-semibold mb-2">Register</h2>
-                        <input type="text" placeholder="Username" value={registerUsername} onChange={e => setRegisterUsername(e.target.value)} className="border p-2 w-full mb-2" required />
-                        <input type="email" placeholder="Email" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} className="border p-2 w-full mb-2" required />
-                        <input type="password" placeholder="Password" value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} className="border p-2 w-full mb-2" required />
-                        <button type="submit" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Register</button>
-                    </form>
-
-                    <form onSubmit={handleLogin} className="md:w-1/2 p-4 border rounded">
-                        <h2 className="text-xl font-semibold mb-2">Login</h2>
-                        <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} className="border p-2 w-full mb-2" required />
-                        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} className="border p-2 w-full mb-2" required />
-                        <button type="submit" className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Login</button>
-                    </form>
+                    {/* ... your login and register forms ... */}
                 </div>
             )}
+
+            {/*  ADD THE <Routes> AND <Route> HERE, OUTSIDE isLoggedIn BLOCK */}
+            <Routes>
+                <Route path="/profile/:username" element={<Profile />} />
+            </Routes>
+
         </div>
-    );
+    </BrowserRouter>
+);
 }
 
 export default App;

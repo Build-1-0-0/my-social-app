@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import { verifyToken } from './utils/jwtUtils';
 import PostList from './PostList';
+import UserTable from './UserTable';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Replace with your actual API URL
 
@@ -235,34 +236,9 @@ function App() {
 
                     <PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} />
 
-                    {data && data.length > 0 && (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {data.map(item => (
-                                    <tr key={item.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">{item.id}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <a href="#" onClick={(e) => { e.preventDefault(); }} className="text-blue-500 hover:underline">
-                                                {item.username}
-                                            </a>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{item.email}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <button className="bg-blue-200 hover:bg-blue-300 text-blue-800 font-bold py-1 px-2 rounded mr-2">Edit</button>
-                                            <button className="bg-red-200 hover:bg-red-300 text-red-800 font-bold py-1 px-2 rounded">Delete</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    import React from 'react';
+javascript
+<UserTable data={data} />
                     )}
 
                 </>

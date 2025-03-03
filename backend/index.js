@@ -183,33 +183,7 @@ export default {
                     console.log(`Profile not found for username: ${username}`);
                     return corsResponse({ error: 'Profile not found' }, 404);
                 }
-} else if (path === '/api/comments' && method === 'GET') { // <---- /api/comments GET is now correctly in the chain
-                const postId = url.searchParams.get('postId');
-                if (!postId) {
-                    return corsResponse({ error: 'postId is required' }, 400);
-                }
-
-                try {
-                    const results = await db.prepare('SELECT id, username, content, timestamp FROM comments WHERE postId = ? ORDER BY timestamp ASC').bind(postId).all();
-                    const data = results.results;
-                    return corsResponse(data);
-                } catch (dbError) {
-                    console.error("Database error:", dbError);
-                    return corsResponse({ error: 'Database error' }, 500);
-                }
-            } else if (path.startsWith('/api/profile/') && method === 'GET') { // <--- Profile Endpoint is now correctly in the chain
-                const username = path.split('/').pop();
-                console.log(`Fetching profile for username: ${username}`);
-
-                const userProfile = await db.prepare('SELECT username, email, bio, profilePictureUrl FROM users WHERE username = ?').bind(username).first();
-                if (userProfile) {
-                    console.log(`Profile found for username: ${username}`, JSON.stringify(userProfile));
-                    return corsResponse(userProfile);
-                } else {
-                    console.log(`Profile not found for username: ${username}`);
-                    return corsResponse({ error: 'Profile not found' }, 404);
-                }
-            }  else if (path === '/api/data' && method === 'GET') { // <---- INSERT THIS ENTIRE BLOCK HERE!
+            } else if (path === '/api/data' && method === 'GET') { // <---- THIS IS THE NEWLY ADDED BLOCK - /api/data ENDPOINT
                 const authHeader = request.headers.get('Authorization');
                 if (!authHeader || !authHeader.startsWith('Bearer ')) {
                     return corsResponse({ error: 'Unauthorized' }, 401);
@@ -233,17 +207,7 @@ export default {
                     console.error("Database error fetching user data:", dbError);
                     return corsResponse({ error: 'Database error fetching user data' }, 500);
                 }
-            } else { // <---- The final 'else' block (should remain *after* the new 'else if')
-                return corsResponse({ message: 'Not found' }, 404);
-            }
-
-        } catch (error) {
-            console.error("Server error:", error);
-            return corsResponse({ error: 'Server error' }, 500);
-        }
-    },
-};
-            } else { // <---- The final 'else' for 'Not found' is correctly at the end of the chain
+            } else { // <---- The final 'else' block for 'Not found' - REMAINS AT THE END
                 return corsResponse({ message: 'Not found' }, 404);
             }
 

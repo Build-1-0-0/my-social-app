@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-// Assuming these components exist in your project
+// Assuming these components exist in your project (update paths if needed)
 import PostList from './components/PostList';
 import ProfilePage from './components/ProfilePage';
-import UserTable from './components/UserTable'; // Make sure this import path is correct
+import UserTable from './components/UserTable';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Your backend API URL
 
@@ -167,11 +167,11 @@ function App() {
                         <li><a href="/">Home</a></li>
                         {isLoggedIn ? (
                             <>
-                                <li><a href="/profile/me">Profile</a></li> {/* You might want to use Link for actual navigation */}
+                                <li><a href="/profile/me">Profile</a></li>
                                 <li><button onClick={handleLogout}>Logout</button></li>
                             </>
                         ) : (
-                            <li><a href="/login">Login</a></li> {/* You might want to use Link */}
+                            <li><a href="/login">Login</a></li>
                         )}
                     </ul>
                 </nav>

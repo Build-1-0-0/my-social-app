@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-// Assuming these components exist in your project (update paths if needed)
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
 
-const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Your backend API URL
+const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
 
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [posts, setPosts] = useState();
-    const [comments, setComments] = useState();
-    const [data, setData] = useState(null); // State to hold user data
-
-    const navigate = useNavigate(); // Hook for programmatic navigation
+    const [posts, setPosts] = useState([]);
+    const [comments, setComments] = useState([]);
+    const [data, setData] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -21,9 +19,9 @@ function App() {
             setIsLoggedIn(true);
             fetchPosts();
             fetchComments();
-            fetchData(); // Fetch user data when logged in
+            fetchUserData();
         }
-    },);
+    }, []); // Runs only once on mount
 
     const handleLogin = (token, username) => {
         localStorage.setItem('token', token);
@@ -31,161 +29,174 @@ function App() {
         setIsLoggedIn(true);
         fetchPosts();
         fetchComments();
-        fetchData(); // Fetch user data after login
-        navigate('/'); // Navigate to the homepage after login
+        fetchUserData();
+        navigate('/');
     };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('username');
         setIsLoggedIn(false);
-        setData(null); // Clear user data on logout
-        navigate('/'); // Navigate to the homepage after logout
+        setData(null);
+        navigate('/');
     };
 
     const fetchPosts = async () => {
         const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const response = await fetch(`${apiUrl}api/posts`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-                if (response.ok) {
-                    const postsData = await response.json();
-                    setPosts(postsData);
-                } else {
-                    console.error('Failed to fetch posts:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('Error fetching posts:', error);
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${apiUrl}api/posts`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                setPosts(await response.json());
+            } else {
+                console.error('Failed to fetch posts:', response.statusText);
             }
+        } catch (error) {
+            console.error('Error fetching posts:', error);
         }
     };
 
     const createPost = async (content) => {
         const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const response = await fetch(`${apiUrl}api/posts`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ content }),
-                });
-                if (response.ok) {
-                    fetchPosts(); // Refresh posts after creating a new one
-                } else {
-                    console.error('Failed to create post:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('Error creating post:', error);
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${apiUrl}api/posts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ content }),
+            });
+            if (response.ok) {
+                fetchPosts();
+            } else {
+                console.error('Failed to create post:', response.statusText);
             }
+        } catch (error) {
+            console.error('Error creating post:', error);
         }
     };
 
-    const fetchComments = async (postId) => {
+    const fetchComments = async (postId = '') => {
         const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                let url = `${apiUrl}api/comments`;
-                if (postId) {
-                    url += `?postId=${postId}`;
-                }
-                const response = await fetch(url, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-                if (response.ok) {
-                    const commentsData = await response.json();
-                    setComments(commentsData);
-                } else {
-                    console.error('Failed to fetch comments:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('Error fetching comments:', error);
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${apiUrl}api/comments${postId ? `?postId=${postId}` : ''}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                setComments(await response.json());
+            } else {
+                console.error('Failed to fetch comments:', response.statusText);
             }
+        } catch (error) {
+            console.error('Error fetching comments:', error);
         }
     };
 
     const createComment = async (postId, content) => {
         const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const response = await fetch(`${apiUrl}api/comments`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ postId, content }),
-                });
-                if (response.ok) {
-                    fetchComments(postId); // Refresh comments after creating a new one
-                } else {
-                    console.error('Failed to create comment:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('Error creating comment:', error);
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${apiUrl}api/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ postId, content }),
+            });
+            if (response.ok) {
+                fetchComments(postId);
+            } else {
+                console.error('Failed to create comment:', response.statusText);
             }
+        } catch (error) {
+            console.error('Error creating comment:', error);
         }
     };
 
-    const fetchData = async () => {
+    const fetchUserData = async () => {
         const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const response = await fetch(`${apiUrl}api/data`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-                if (response.ok) {
-                    const userData = await response.json();
-                    setData(userData);
-                    console.log("Fetched user data:", userData);
-                } else {
-                    console.error('Failed to fetch data:', response.status, response.statusText);
-                    const errorText = await response.text();
-                    console.error('Failed to fetch data body:', errorText);
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${apiUrl}api/data`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                setData(await response.json());
+            } else {
+                console.error('Failed to fetch user data:', response.statusText);
             }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
         }
     };
 
     return (
-        <div>
-            <BrowserRouter>
+        <Router>
+            <div>
+                {/* Navigation Bar */}
                 <nav>
                     <ul>
-                        <li><a href="/">Home</a></li>
+                        <li><Link to="/">Home</Link></li>
                         {isLoggedIn ? (
                             <>
-                                <li><a href="/profile/me">Profile</a></li>
+                                <li><Link to="/profile/me">Profile</Link></li>
                                 <li><button onClick={handleLogout}>Logout</button></li>
                             </>
                         ) : (
-                            <li><a href="/login">Login</a></li>
+                            <li><Link to="/login">Login</Link></li>
                         )}
                     </ul>
                 </nav>
 
+                {/* Page Routes */}
                 <Routes>
-                    <Route path="/" element={isLoggedIn ? <PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} createPost={createPost} /> : <div>Please Login</div>} />
+                    <Route 
+                        path="/" 
+                        element={
+                            isLoggedIn 
+                                ? <PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} createPost={createPost} />
+                                : <h2>Please Login</h2>
+                        } 
+                    />
                     <Route path="/profile/:username" element={<ProfilePage />} />
-                    <Route path="/login" element={<div>Login Form Here (Implement your login logic and call handleLogin)</div>} /> {/* Replace with your actual Login component */}
+                    <Route 
+                        path="/login" 
+                        element={
+                            <LoginForm handleLogin={handleLogin} />
+                        } 
+                    />
                 </Routes>
 
-                {isLoggedIn && data && <UserTable data={data} />} {/* Render UserTable when logged in and data is available */}
-            </BrowserRouter>
-        </div>
+                {/* Show user table if logged in */}
+                {isLoggedIn && data && <UserTable data={data} />}
+            </div>
+        </Router>
     );
 }
+
+// Placeholder Login Form
+const LoginForm = ({ handleLogin }) => {
+    const fakeLogin = () => {
+        handleLogin('test-token', 'TestUser'); // Replace with real login logic
+    };
+
+    return (
+        <div>
+            <h2>Login</h2>
+            <button onClick={fakeLogin}>Login</button>
+        </div>
+    );
+};
 
 export default App;

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 // Assuming these components exist in your project (update paths if needed)
-import PostList from './components/PostList';
-import ProfilePage from './components/ProfilePage';
-import UserTable from './components/UserTable';
+import PostList from './PostList';
+import ProfilePage from './ProfilePage';
+import UserTable from './UserTable';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Your backend API URL
 

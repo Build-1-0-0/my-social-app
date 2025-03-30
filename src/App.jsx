@@ -4,6 +4,7 @@ import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
 import './index.css';
+import MyContext from './MyContext';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
 

@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+// src/App.jsx
+import React, { useEffect, useState, useContext } from 'react';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { MyContext } from './MyContext';
 import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
 import './index.css';
-import MyContext from './MyContext';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
 
 const App = () => {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const { authState, login, logout, setAuthError } = useContext(MyContext);
     const [posts, setPosts] = useState([]);
     const [comments, setComments] = useState([]);
     const [data, setData] = useState(null);
@@ -18,46 +19,36 @@ const App = () => {
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (token) {
-            setIsLoggedIn(true);
+        const username = localStorage.getItem('username');
+        if (token && username && token.split('.').length === 3) {
+            login(token, username);
             fetchPosts();
             fetchComments();
             fetchUserData();
+        } else if (token) {
+            // Clear invalid token
+            logout();
         }
-    }, []);
-
-    const handleLogin = (token, username) => {
-        localStorage.setItem('token', token);
-        localStorage.setItem('username', username);
-        setIsLoggedIn(true);
-        fetchPosts();
-        fetchComments();
-        fetchUserData();
-        navigate('/');
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        setIsLoggedIn(false);
-        setData(null);
-        setPosts([]);
-        setComments([]);
-        navigate('/login');
-    };
+    }, [login, logout]);
 
     const fetchPosts = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
+        if (!authState.token) return;
         setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/posts`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${authState.token}` }
             });
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                if (response.status === 401) {
+                    logout();
+                    navigate('/login');
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             setPosts(await response.json());
         } catch (error) {
+            setAuthError(error.message);
             console.error('Error fetching posts:', error);
         } finally {
             setIsLoading(false);
@@ -65,22 +56,21 @@ const App = () => {
     };
 
     const createPost = async (content) => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
+        if (!authState.token) return;
         setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/posts`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${authState.token}`,
                 },
                 body: JSON.stringify({ content }),
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             await fetchPosts();
         } catch (error) {
+            setAuthError(error.message);
             console.error('Error creating post:', error);
         } finally {
             setIsLoading(false);
@@ -88,17 +78,16 @@ const App = () => {
     };
 
     const fetchComments = async (postId = '') => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
+        if (!authState.token) return;
         setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/comments${postId ? `?postId=${postId}` : ''}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${authState.token}` }
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             setComments(await response.json());
         } catch (error) {
+            setAuthError(error.message);
             console.error('Error fetching comments:', error);
         } finally {
             setIsLoading(false);
@@ -106,22 +95,21 @@ const App = () => {
     };
 
     const createComment = async (postId, content) => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
+        if (!authState.token) return;
         setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
+                    'Authorization': `Bearer ${authState.token}`,
                 },
                 body: JSON.stringify({ postId, content }),
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             await fetchComments(postId);
         } catch (error) {
+            setAuthError(error.message);
             console.error('Error creating comment:', error);
         } finally {
             setIsLoading(false);
@@ -129,21 +117,36 @@ const App = () => {
     };
 
     const fetchUserData = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
+        if (!authState.token) return;
         setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/data`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${authState.token}` }
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             setData(await response.json());
         } catch (error) {
+            setAuthError(error.message);
             console.error('Error fetching user data:', error);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleLogin = (token, username) => {
+        login(token, username);
+        fetchPosts();
+        fetchComments();
+        fetchUserData();
+        navigate('/');
+    };
+
+    const handleLogout = () => {
+        logout();
+        setPosts([]);
+        setComments([]);
+        setData(null);
+        navigate('/login');
     };
 
     return (
@@ -151,15 +154,16 @@ const App = () => {
             <nav>
                 <ul>
                     <li><Link to="/">Home</Link></li>
-                    {isLoggedIn ? (
+                    {authState.isLoggedIn ? (
                         <>
-                            <li><Link to={`/profile/${localStorage.getItem('username')}`}>Profile</Link></li>
+                            <li><Link to={`/profile/${authState.username}`}>Profile</Link></li>
                             <li><button onClick={handleLogout}>Logout</button></li>
                         </>
                     ) : (
                         <li><Link to="/login">Login</Link></li>
                     )}
                 </ul>
+                {authState.error && <p style={{ color: 'red' }}>{authState.error}</p>}
             </nav>
 
             {isLoading && <p>Loading...</p>}
@@ -168,7 +172,7 @@ const App = () => {
                 <Route 
                     path="/" 
                     element={
-                        isLoggedIn 
+                        authState.isLoggedIn 
                             ? <PostList 
                                 posts={posts} 
                                 comments={comments} 
@@ -186,7 +190,7 @@ const App = () => {
                 />
             </Routes>
 
-            {isLoggedIn && data && <UserTable data={data} />}
+            {authState.isLoggedIn && data && <UserTable data={data} />}
         </div>
     );
 };
@@ -198,6 +202,7 @@ const LoginForm = ({ handleLogin }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(null);
         try {
             const response = await fetch(`${apiUrl}api/users/login`, {
                 method: 'POST',
@@ -205,7 +210,10 @@ const LoginForm = ({ handleLogin }) => {
                 body: JSON.stringify({ username, password }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error);
+            if (!response.ok) throw new Error(data.error || 'Login failed');
+            if (!data.token || data.token.split('.').length !== 3) {
+                throw new Error('Invalid token format received');
+            }
             handleLogin(data.token, data.username);
         } catch (err) {
             setError(err.message);
@@ -237,10 +245,4 @@ const LoginForm = ({ handleLogin }) => {
     );
 };
 
-export default function Root() {
-    return (
-        <Router>
-            <App />
-        </Router>
-    );
-}
+export default App;

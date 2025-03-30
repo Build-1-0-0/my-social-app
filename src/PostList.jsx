@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { marked } from 'marked'; // For Markdown parsing
+import { marked } from 'marked';
 
-const PostList = ({ posts, comments, fetchComments, createComment, createPost }) => {
+const PostList = ({ posts, comments, fetchComments, createComment, createPost, currentUsername, token }) => {
     const [newPost, setNewPost] = useState('');
     const [newComment, setNewComment] = useState({});
     const [selectedPostId, setSelectedPostId] = useState(null);
     const [error, setError] = useState(null);
+    const [editingPostId, setEditingPostId] = useState(null);
+    const [editContent, setEditContent] = useState('');
 
-    console.log('Posts received:', posts); // Debug log
+    console.log('Posts received:', posts);
 
     const handlePostSubmit = async (e) => {
         e.preventDefault();
@@ -15,12 +17,9 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
             setError('Post content cannot be empty');
             return;
         }
-
         try {
             setError(null);
-            console.log('Submitting post:', newPost);
             await createPost(newPost);
-            console.log('Post created successfully');
             setNewPost('');
         } catch (err) {
             setError('Failed to create post: ' + (err.message || 'Unknown error'));
@@ -34,7 +33,6 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
             setError('Comment cannot be empty');
             return;
         }
-
         try {
             setError(null);
             await createComment(postId, newComment[postId]);
@@ -60,14 +58,12 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
         }
     };
 
-    // Editor Tools
     const addFormatting = (type) => {
         const textarea = document.getElementById('postTextarea');
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const text = newPost;
         let newText;
-
         switch (type) {
             case 'bold':
                 newText = text.substring(0, start) + '**' + text.substring(start, end) + '**' + text.substring(end);
@@ -81,41 +77,97 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
             default:
                 newText = text;
         }
-
         setNewPost(newText);
         textarea.focus();
+    };
+
+    const handleLikePost = async (postId) => {
+        try {
+            const response = await fetch(`https://your-worker.workers.dev/api/posts/${postId}/like`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!response.ok) throw new Error('Failed to like post');
+            const data = await response.json();
+            console.log('Post liked:', data);
+            // Assuming parent component updates posts state
+        } catch (err) {
+            setError('Failed to like post: ' + (err.message || 'Unknown error'));
+        }
+    };
+
+    const handleEditPost = async (postId) => {
+        if (editingPostId === postId) {
+            try {
+                const response = await fetch(`https://your-worker.workers.dev/api/posts/${postId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: editContent }),
+                });
+                if (!response.ok) throw new Error('Failed to edit post');
+                const updatedPost = await response.json();
+                console.log('Post edited:', updatedPost);
+                setEditingPostId(null);
+                setEditContent('');
+                // Assuming parent component updates posts state
+            } catch (err) {
+                setError('Failed to edit post: ' + (err.message || 'Unknown error'));
+            }
+        } else {
+            const post = posts.find(p => p.id === postId);
+            setEditingPostId(postId);
+            setEditContent(post.content);
+        }
+    };
+
+    const handleDeletePost = async (postId) => {
+        if (window.confirm('Are you sure you want to delete this post?')) {
+            try {
+                const response = await fetch(`https://your-worker.workers.dev/api/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                });
+                if (!response.ok) throw new Error('Failed to delete post');
+                console.log('Post deleted:', postId);
+                // Assuming parent component updates posts state
+            } catch (err) {
+                setError('Failed to delete post: ' + (err.message || 'Unknown error'));
+            }
+        }
+    };
+
+    const handleLikeComment = async (commentId) => {
+        try {
+            const response = await fetch(`https://your-worker.workers.dev/api/comments/${commentId}/like`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!response.ok) throw new Error('Failed to like comment');
+            const data = await response.json();
+            console.log('Comment liked:', data);
+            await fetchComments(selectedPostId);
+        } catch (err) {
+            setError('Failed to like comment: ' + (err.message || 'Unknown error'));
+        }
     };
 
     return (
         <div className="max-w-2xl mx-auto my-6">
             <h2 className="text-2xl font-bold mb-4">Post Feed</h2>
 
-            {/* Post Creation Form */}
             <form onSubmit={handlePostSubmit} className="mb-8">
                 <div className="mb-2 flex space-x-2">
-                    <button
-                        type="button"
-                        onClick={() => addFormatting('bold')}
-                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                        title="Bold"
-                    >
+                    <button type="button" onClick={() => addFormatting('bold')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Bold">
                         <strong>B</strong>
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => addFormatting('italic')}
-                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                        title="Italic"
-                    >
+                    <button type="button" onClick={() => addFormatting('italic')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Italic">
                         <em>I</em>
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => addFormatting('quote')}
-                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
-                        title="Quote"
-                    >
-                        &gt;
+                    <button type="button" onClick={() => addFormatting('quote')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Quote">
+                        >
                     </button>
                 </div>
                 <textarea
@@ -139,7 +191,6 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
                 {error && <p className="text-red-600 mt-2">{error}</p>}
             </form>
 
-            {/* Posts Display */}
             {posts.length === 0 ? (
                 <p className="text-gray-600 text-center">No posts available yet. Be the first to post!</p>
             ) : (
@@ -148,10 +199,18 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
                         <div key={post.id} className="bg-white p-4 rounded-lg shadow">
                             <div className="flex items-start space-x-3">
                                 <div className="flex-1">
-                                    <p
-                                        className="text-gray-900 whitespace-pre-wrap"
-                                        dangerouslySetInnerHTML={{ __html: marked(post.content, { breaks: true }) }}
-                                    />
+                                    {editingPostId === post.id ? (
+                                        <textarea
+                                            value={editContent}
+                                            onChange={(e) => setEditContent(e.target.value)}
+                                            className="w-full p-2 border rounded-lg"
+                                        />
+                                    ) : (
+                                        <p
+                                            className="text-gray-900 whitespace-pre-wrap"
+                                            dangerouslySetInnerHTML={{ __html: marked(post.content, { breaks: true }) }}
+                                        />
+                                    )}
                                     <p className="text-sm text-gray-500 mt-1">
                                         Posted by <span className="font-medium">{post.username}</span>
                                         {post.created_at ? ` on ${new Date(post.created_at).toLocaleString('en-US', {
@@ -163,10 +222,33 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
                                             hour12: true,
                                         })}` : ' (time not available)'}
                                     </p>
+                                    <div className="flex space-x-4 mt-2">
+                                        <button
+                                            onClick={() => handleLikePost(post.id)}
+                                            className="text-indigo-600 hover:underline text-sm"
+                                        >
+                                            Like ({post.likes || 0})
+                                        </button>
+                                        {post.username === currentUsername && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEditPost(post.id)}
+                                                    className="text-indigo-600 hover:underline text-sm"
+                                                >
+                                                    {editingPostId === post.id ? 'Save' : 'Edit'}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeletePost(post.id)}
+                                                    className="text-red-600 hover:underline text-sm"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Comments Toggle */}
                             <button
                                 onClick={() => toggleComments(post.id)}
                                 className="mt-3 text-indigo-600 hover:underline text-sm"
@@ -174,7 +256,6 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
                                 {selectedPostId === post.id ? 'Hide Comments' : 'Show Comments'}
                             </button>
 
-                            {/* Comments Section */}
                             {selectedPostId === post.id && (
                                 <div className="mt-4 border-t pt-4">
                                     {comments && comments.length > 0 ? (
@@ -193,6 +274,12 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost })
                                                             hour12: true,
                                                         })})
                                                     </span>
+                                                    <button
+                                                        onClick={() => handleLikeComment(comment.id)}
+                                                        className="ml-2 text-indigo-600 hover:underline"
+                                                    >
+                                                        Like ({comment.likes || 0})
+                                                    </button>
                                                 </li>
                                             ))}
                                         </ul>

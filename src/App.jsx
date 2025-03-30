@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react
 import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
+import './index.css';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
 

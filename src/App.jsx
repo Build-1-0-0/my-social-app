@@ -6,11 +6,12 @@ import UserTable from './UserTable';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
 
-function App() {
+const App = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [posts, setPosts] = useState([]);
     const [comments, setComments] = useState([]);
     const [data, setData] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -21,7 +22,7 @@ function App() {
             fetchComments();
             fetchUserData();
         }
-    }, []); // Runs only once on mount
+    }, []);
 
     const handleLogin = (token, username) => {
         localStorage.setItem('token', token);
@@ -38,24 +39,26 @@ function App() {
         localStorage.removeItem('username');
         setIsLoggedIn(false);
         setData(null);
-        navigate('/');
+        setPosts([]);
+        setComments([]);
+        navigate('/login');
     };
 
     const fetchPosts = async () => {
         const token = localStorage.getItem('token');
         if (!token) return;
 
+        setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/posts`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                setPosts(await response.json());
-            } else {
-                console.error('Failed to fetch posts:', response.statusText);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            setPosts(await response.json());
         } catch (error) {
             console.error('Error fetching posts:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -63,6 +66,7 @@ function App() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
+        setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/posts`, {
                 method: 'POST',
@@ -72,13 +76,12 @@ function App() {
                 },
                 body: JSON.stringify({ content }),
             });
-            if (response.ok) {
-                fetchPosts();
-            } else {
-                console.error('Failed to create post:', response.statusText);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            await fetchPosts();
         } catch (error) {
             console.error('Error creating post:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -86,17 +89,17 @@ function App() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
+        setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/comments${postId ? `?postId=${postId}` : ''}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                setComments(await response.json());
-            } else {
-                console.error('Failed to fetch comments:', response.statusText);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            setComments(await response.json());
         } catch (error) {
             console.error('Error fetching comments:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -104,6 +107,7 @@ function App() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
+        setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/comments`, {
                 method: 'POST',
@@ -113,13 +117,12 @@ function App() {
                 },
                 body: JSON.stringify({ postId, content }),
             });
-            if (response.ok) {
-                fetchComments(postId);
-            } else {
-                console.error('Failed to create comment:', response.statusText);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            await fetchComments(postId);
         } catch (error) {
             console.error('Error creating comment:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -127,76 +130,115 @@ function App() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
+        setIsLoading(true);
         try {
             const response = await fetch(`${apiUrl}api/data`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (response.ok) {
-                setData(await response.json());
-            } else {
-                console.error('Failed to fetch user data:', response.statusText);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            setData(await response.json());
         } catch (error) {
             console.error('Error fetching user data:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
     return (
-        <Router>
-            <div>
-                {/* Navigation Bar */}
-                <nav>
-                    <ul>
-                        <li><Link to="/">Home</Link></li>
-                        {isLoggedIn ? (
-                            <>
-                                <li><Link to="/profile/me">Profile</Link></li>
-                                <li><button onClick={handleLogout}>Logout</button></li>
-                            </>
-                        ) : (
-                            <li><Link to="/login">Login</Link></li>
-                        )}
-                    </ul>
-                </nav>
+        <div>
+            <nav>
+                <ul>
+                    <li><Link to="/">Home</Link></li>
+                    {isLoggedIn ? (
+                        <>
+                            <li><Link to={`/profile/${localStorage.getItem('username')}`}>Profile</Link></li>
+                            <li><button onClick={handleLogout}>Logout</button></li>
+                        </>
+                    ) : (
+                        <li><Link to="/login">Login</Link></li>
+                    )}
+                </ul>
+            </nav>
 
-                {/* Page Routes */}
-                <Routes>
-                    <Route 
-                        path="/" 
-                        element={
-                            isLoggedIn 
-                                ? <PostList posts={posts} comments={comments} fetchComments={fetchComments} createComment={createComment} createPost={createPost} />
-                                : <h2>Please Login</h2>
-                        } 
-                    />
-                    <Route path="/profile/:username" element={<ProfilePage />} />
-                    <Route 
-                        path="/login" 
-                        element={
-                            <LoginForm handleLogin={handleLogin} />
-                        } 
-                    />
-                </Routes>
+            {isLoading && <p>Loading...</p>}
 
-                {/* Show user table if logged in */}
-                {isLoggedIn && data && <UserTable data={data} />}
-            </div>
-        </Router>
+            <Routes>
+                <Route 
+                    path="/" 
+                    element={
+                        isLoggedIn 
+                            ? <PostList 
+                                posts={posts} 
+                                comments={comments} 
+                                fetchComments={fetchComments} 
+                                createComment={createComment} 
+                                createPost={createPost} 
+                              />
+                            : <h2>Please Login</h2>
+                    } 
+                />
+                <Route path="/profile/:username" element={<ProfilePage />} />
+                <Route 
+                    path="/login" 
+                    element={<LoginForm handleLogin={handleLogin} />} 
+                />
+            </Routes>
+
+            {isLoggedIn && data && <UserTable data={data} />}
+        </div>
     );
-}
+};
 
-// Placeholder Login Form
 const LoginForm = ({ handleLogin }) => {
-    const fakeLogin = () => {
-        handleLogin('test-token', 'TestUser'); // Replace with real login logic
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState(null);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch(`${apiUrl}api/users/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+            handleLogin(data.token, data.username);
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     return (
         <div>
             <h2>Login</h2>
-            <button onClick={fakeLogin}>Login</button>
+            <form onSubmit={handleSubmit}>
+                <input 
+                    type="text" 
+                    value={username} 
+                    onChange={(e) => setUsername(e.target.value)} 
+                    placeholder="Username" 
+                    required 
+                />
+                <input 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="Password" 
+                    required 
+                />
+                <button type="submit">Login</button>
+            </form>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
         </div>
     );
 };
 
-export default App;
+export default function Root() {
+    return (
+        <Router>
+            <App />
+        </Router>
+    );
+}

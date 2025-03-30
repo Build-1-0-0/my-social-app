@@ -21,7 +21,7 @@ export default {
             return new Response(null, { status: 204, headers: corsHeaders });
         }
 
-        const corsResponse = (data, status = 200) => 
+        const corsResponse = (data, status = 200) =>
             new Response(JSON.stringify(data), { status, headers: corsHeaders });
 
         try {
@@ -30,7 +30,7 @@ export default {
             // USER REGISTRATION
             if (path === '/api/users/register' && method === 'POST') {
                 const { username, email, password, bio, profilePictureUrl } = await request.json();
-                
+
                 if (!username || !email || !password) {
                     return corsResponse({ error: 'Missing required fields' }, 400);
                 }
@@ -38,7 +38,7 @@ export default {
                 const existingUser = await db.prepare('SELECT username FROM users WHERE username = ? OR email = ?')
                     .bind(username, email)
                     .first();
-                
+
                 if (existingUser) {
                     return corsResponse({ error: 'Username or email already exists' }, 409);
                 }
@@ -56,7 +56,7 @@ export default {
             // USER LOGIN
             else if (path === '/api/users/login' && method === 'POST') {
                 const { username, password } = await request.json();
-                
+
                 if (!username || !password) {
                     return corsResponse({ error: 'Username and password required' }, 400);
                 }
@@ -86,11 +86,12 @@ export default {
                 if (!content) return corsResponse({ error: 'Content is required' }, 400);
 
                 const result = await db.prepare(`
-                    INSERT INTO posts (username, content)
-                    VALUES (?, ?)
+                    INSERT INTO posts (username, content, created_at)
+                    VALUES (?, ?, datetime('now'))
                     RETURNING id, username, content, created_at
                 `).bind(extractedUsername, content).first();
 
+                console.log('Post created:', result);
                 return corsResponse(result, 201);
             }
 
@@ -119,11 +120,12 @@ export default {
                 if (!postExists) return corsResponse({ error: 'Post not found' }, 404);
 
                 const result = await db.prepare(`
-                    INSERT INTO comments (postId, username, content)
-                    VALUES (?, ?, ?)
+                    INSERT INTO comments (postId, username, content, timestamp)
+                    VALUES (?, ?, ?, datetime('now'))
                     RETURNING id, postId, username, content, timestamp
                 `).bind(postId, extractedUsername, content).first();
 
+                console.log('Comment created:', result);
                 return corsResponse(result, 201);
             }
 
@@ -145,7 +147,7 @@ export default {
             // USER PROFILE FETCH
             else if (path.startsWith('/api/profile/') && method === 'GET') {
                 const username = path.split('/').pop();
-                
+
                 const userProfile = await db.prepare(`
                     SELECT username, email, bio, profilePictureUrl 
                     FROM users 

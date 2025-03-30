@@ -83,7 +83,7 @@ const PostList = ({ posts, comments, fetchComments, createComment, createPost, c
 
     const handleLikePost = async (postId) => {
         try {
-            const response = await fetch(`https://your-worker.workers.dev/api/posts/${postId}/like`, {
+            const response = await fetch(`https://my-worker.africancontent807.workers.dev/api/posts/${postId}/like`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
             });

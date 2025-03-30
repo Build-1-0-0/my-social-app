@@ -1,1 +1,8 @@
-
+{
+  "name": "my-social-app-worker",
+  "version": "0.0.0",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "@tsndr/cloudflare-worker-jwt": "^2.2.1"
+  }
+}

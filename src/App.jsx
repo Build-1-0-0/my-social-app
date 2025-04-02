@@ -5,6 +5,7 @@ import { MyContext } from './MyContext';
 import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
+import ErrorBoundary from './ErrorBoundary';
 import './index.css';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
@@ -221,28 +222,51 @@ const LoginForm = ({ handleLogin }) => {
     };
 
     return (
-        <div>
-            <h2>Login</h2>
-            <form onSubmit={handleSubmit}>
-                <input 
-                    type="text" 
-                    value={username} 
-                    onChange={(e) => setUsername(e.target.value)} 
-                    placeholder="Username" 
-                    required 
-                />
-                <input 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
-                    placeholder="Password" 
-                    required 
-                />
-                <button type="submit">Login</button>
-            </form>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-        </div>
-    );
-};
+    <ErrorBoundary>
+      <div>
+        <nav>
+          <ul>
+            <li><Link to="/">Home</Link></li>
+            {authState.isLoggedIn ? (
+              <>
+                <li><Link to={`/profile/${authState.username}`}>Profile</Link></li>
+                <li><button onClick={handleLogout}>Logout</button></li>
+              </>
+            ) : (
+              <li><Link to="/login">Login</Link></li>
+            )}
+          </ul>
+          {authState.error && <p style={{ color: 'red' }}>{authState.error}</p>}
+        </nav>
 
-export default App;
+        {isLoading && <p>Loading...</p>}
+
+        <Routes>
+          <Route 
+            path="/" 
+            element={
+              authState.isLoggedIn 
+                ? <PostList 
+                    posts={posts} 
+                    comments={comments} 
+                    fetchComments={fetchComments} 
+                    createComment={createComment} 
+                    createPost={createPost} 
+                    currentUsername={authState.username}
+                    token={authState.token}
+                  />
+                : <h2>Please Login</h2>
+            } 
+          />
+          <Route path="/profile/:username" element={<ProfilePage />} />
+          <Route 
+            path="/login" 
+            element={<LoginForm handleLogin={handleLogin} />} 
+          />
+        </Routes>
+
+        {authState.isLoggedIn && data && <UserTable data={data} />}
+      </div>
+    </ErrorBoundary>
+  );
+};

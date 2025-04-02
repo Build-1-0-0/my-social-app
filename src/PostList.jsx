@@ -95,24 +95,24 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
     };
 
     const handleLikePost = async (postId) => {
-        try {
-            const response = await fetch(`${workerUrl}/api/posts/${postId}/like`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Failed to like post: ${response.status} - ${JSON.stringify(errorData)}`);
-            }
-            const data = await response.json();
-            console.log('Post liked:', data);
-            setPosts(posts.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
-        } catch (err) {
-            console.error('Like post error:', err);
-            setError('Failed to like post: ' + (err.message || 'Unknown error'));
-        }
-    };
-
+  try {
+    console.log('Liking post:', postId, 'Token:', token);
+    const response = await fetch(`${workerUrl}/api/posts/${postId}/like`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to like post: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+    const data = await response.json();
+    console.log('Post liked:', data);
+    setPosts(posts.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
+  } catch (err) {
+    console.error('Like post error:', err);
+    setError('Failed to like post: ' + (err.message || 'Unknown error'));
+  }
+};
     const handleEditPost = async (postId) => {
         if (editingPostId === postId) {
             try {

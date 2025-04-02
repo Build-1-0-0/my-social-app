@@ -6,20 +6,18 @@ export default defineConfig({
   plugins: [react()],
   root: '.', // Project root
   build: {
-    outDir: 'dist', // Cloudflare Pages expects this directory
-    sourcemap: true, // Useful for debugging
+    outDir: 'dist', // Cloudflare Pages output directory
+    sourcemap: true, // For debugging
     rollupOptions: {
-      input: {
-        main: './index.html', // Entry point for the build
-      },
+      input: './index.html', // Entry point is index.html
     },
   },
   server: {
-    port: 3000, // Local dev port
-    open: true, // Open browser on dev start
+    port: 3000,
+    open: true,
     proxy: {
       '/api': {
-        target: 'https://my-worker.africancontent807.workers.dev', // Your Worker URL
+        target: 'https://my-worker.africancontent807.workers.dev',
         changeOrigin: true,
         secure: true,
       },

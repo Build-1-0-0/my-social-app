@@ -29,24 +29,25 @@ export default {
 
             // USER REGISTRATION
             if (path === '/api/users/register' && method === 'POST') {
-                const { username, email, password, bio, profilePictureUrl } = await request.json();
-                if (!username || !email || !password) {
-                    return corsResponse({ error: 'Missing required fields' }, 400);
-                }
-                const existingUser = await db.prepare('SELECT username FROM users WHERE username = ? OR email = ?')
-                    .bind(username, email)
-                    .first();
-                if (existingUser) {
-                    return corsResponse({ error: 'Username or email already exists' }, 409);
-                }
-                const hashedPassword = await bcrypt.hash(password, 10);
-                await db.prepare(`
-                    INSERT INTO users (username, email, password, bio, profilePictureUrl)
-                    VALUES (?, ?, ?, ?, ?)
-                `).bind(username, email, hashedPassword, bio || null, profilePictureUrl || null).run();
-                console.log(`User registered: ${username}`);
-                return corsResponse({ message: 'User registered successfully' }, 201);
-            }
+    const { username, email, password, bio, profilePictureUrl } = await request.json();
+    if (!username || !email || !password) {
+        return corsResponse({ error: 'Missing required fields' }, 400);
+    }
+    const existingUser = await db.prepare('SELECT username FROM users WHERE username = ? OR email = ?')
+        .bind(username, email)
+        .first();
+    if (existingUser) {
+        return corsResponse({ error: 'Username or email already exists' }, 409);
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.prepare(`
+        INSERT INTO users (username, email, password, bio, profilePictureUrl)
+        VALUES (?, ?, ?, ?, ?)
+    `).bind(username, email, hashedPassword, bio || null, profilePictureUrl || null).run();
+    const token = await jwt.sign({ username }, jwtSecret, { expiresIn: '24h' }); // Add token
+    console.log(`User registered: ${username}`);
+    return corsResponse({ message: 'User registered successfully', token, username }, 201); // Return token
+}
 
             // USER LOGIN
             else if (path === '/api/users/login' && method === 'POST') {

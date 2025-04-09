@@ -5,6 +5,7 @@ import { MyContext } from './MyContext';
 import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
+import Register from './Register'; // Import Register
 import ErrorBoundary from './ErrorBoundary';
 import './index.css';
 
@@ -161,7 +162,10 @@ const App = () => {
                 <li><button onClick={handleLogout}>Logout</button></li>
               </>
             ) : (
-              <li><Link to="/login">Login</Link></li>
+              <>
+                <li><Link to="/login">Login</Link></li>
+                <li><Link to="/register">Register</Link></li> {/* Add Register link */}
+              </>
             )}
           </ul>
           {authState.error && <p style={{ color: 'red' }}>{authState.error}</p>}
@@ -170,28 +174,29 @@ const App = () => {
         {isLoading && <p>Loading...</p>}
 
         <Routes>
-        <Route
-  path="/"
-  element={
-    authState.isLoggedIn ? (
-      <PostList
-        posts={posts}
-        setPosts={setPosts}
-        comments={comments}
-        setComments={setComments}
-        fetchComments={fetchComments}
-        createComment={createComment}
-        createPost={createPost}
-        currentUsername={authState.username}
-        token={authState.token}
-      />
-    ) : (
-      <h2>Please Login</h2>
-    )
-  }
-/>
+          <Route
+            path="/"
+            element={
+              authState.isLoggedIn ? (
+                <PostList
+                  posts={posts}
+                  setPosts={setPosts}
+                  comments={comments}
+                  setComments={setComments}
+                  fetchComments={fetchComments}
+                  createComment={createComment}
+                  createPost={createPost}
+                  currentUsername={authState.username}
+                  token={authState.token}
+                />
+              ) : (
+                <h2>Please Login</h2>
+              )
+            }
+          />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/login" element={<LoginForm handleLogin={handleLogin} />} />
+          <Route path="/register" element={<Register />} /> {/* Add Register route */}
         </Routes>
 
         {authState.isLoggedIn && data && <UserTable data={data} />}
@@ -208,6 +213,10 @@ const LoginForm = ({ handleLogin }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+    if (!username.trim() || !password.trim()) {
+      setError('Username and password are required');
+      return;
+    }
     try {
       const response = await fetch(`${apiUrl}api/users/login`, {
         method: 'POST',
@@ -215,12 +224,16 @@ const LoginForm = ({ handleLogin }) => {
         body: JSON.stringify({ username, password }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Login failed');
+      console.log('Login response:', { status: response.status, data });
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+      }
       if (!data.token || data.token.split('.').length !== 3) {
         throw new Error('Invalid token format received');
       }
       handleLogin(data.token, data.username);
     } catch (err) {
+      console.error('Login error:', err.message);
       setError(err.message);
     }
   };

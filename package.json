@@ -13,11 +13,10 @@
     "deploy": "npm run build"
   },
   "dependencies": {
-    "marked": "^14.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
-    "remark": "^15.0.0",
+    "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {

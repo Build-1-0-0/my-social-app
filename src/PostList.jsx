@@ -208,10 +208,10 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
             type="button"
             onClick={() => addFormatting('quote')}
             className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
-            title="Quote"
-          >
-            >
-          </button>
+            <button 
+title="Quote">
+  Quote
+</button>
           <button
             type="button"
             onClick={() => addFormatting('code')}

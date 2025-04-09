@@ -152,7 +152,7 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
     try {
       const response = await fetch(`${workerUrl}/api/comments/${commentId}/like`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`  await fetchPosts();` },
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
         const errorData = await response.json();
@@ -180,7 +180,7 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
             <em>I</em>
           </button>
           <button type="button" onClick={() => addFormatting('quote')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Quote">
-            &gt;
+            >
           </button>
         </div>
         <textarea

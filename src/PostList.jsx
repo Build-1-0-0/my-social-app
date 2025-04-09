@@ -1,6 +1,7 @@
 // src/PostList.jsx
 import React, { useState } from 'react';
-import { marked } from 'marked';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const PostList = ({ posts, setPosts, comments, setComments, fetchComments, createComment, createPost, currentUsername, token }) => {
   const [newPost, setNewPost] = useState('');
@@ -65,15 +66,29 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
     const end = textarea.selectionEnd;
     const text = newPost;
     let newText;
+
+    const insert = (prefix, suffix = '') => {
+      return text.slice(0, start) + prefix + text.slice(start, end) + suffix + text.slice(end);
+    };
+
     switch (type) {
       case 'bold':
-        newText = text.substring(0, start) + '**' + text.substring(start, end) + '**' + text.substring(end);
+        newText = insert('**', '**');
         break;
       case 'italic':
-        newText = text.substring(0, start) + '*' + text.substring(start, end) + '*' + text.substring(end);
+        newText = insert('*', '*');
         break;
       case 'quote':
-        newText = text.substring(0, start) + '> ' + text.substring(start, end) + text.substring(end);
+        newText = insert('> ');
+        break;
+      case 'code':
+        newText = insert('`', '`');
+        break;
+      case 'link':
+        newText = insert('[', '](https://)');
+        break;
+      case 'underline':
+        newText = insert('<u>', '</u>');
         break;
       default:
         newText = text;
@@ -172,22 +187,61 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
       <h2 className="text-2xl font-bold mb-4">Post Feed</h2>
 
       <form onSubmit={handlePostSubmit} className="mb-8">
-        <div className="mb-2 flex space-x-2">
-          <button type="button" onClick={() => addFormatting('bold')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Bold">
-            <strong>B</strong>
+        <div className="mb-2 flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => addFormatting('bold')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold"
+            title="Bold (Ctrl+B)"
+          >
+            B
           </button>
-          <button type="button" onClick={() => addFormatting('italic')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Italic">
-            <em>I</em>
+          <button
+            type="button"
+            onClick={() => addFormatting('italic')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic"
+            title="Italic (Ctrl+I)"
+          >
+            I
           </button>
-          <button type="button" onClick={() => addFormatting('quote')} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300" title="Quote">
+          <button
+            type="button"
+            onClick={() => addFormatting('quote')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
+            title="Quote"
+          >
             >
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('code')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
+            title="Inline Code"
+          >
+            {'</>'}
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('link')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            title="Insert Link"
+          >
+            🔗
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('underline')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline"
+            title="Underline"
+          >
+            <u>U</u>
           </button>
         </div>
         <textarea
           id="postTextarea"
           value={newPost}
           onChange={(e) => setNewPost(e.target.value)}
-          placeholder="What's on your mind? Use **bold**, *italic*, or > quote"
+          placeholder="What's on your mind? Use Markdown: **bold**, *italic*, > quote, `code`, [link](url), <u>underline</u>"
           className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[100px]"
           maxLength={1120}
         />
@@ -219,10 +273,9 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
                       className="w-full p-2 border rounded-lg"
                     />
                   ) : (
-                    <p
-                      className="text-gray-900 whitespace-pre-wrap"
-                      dangerouslySetInnerHTML={{ __html: marked(post.content, { breaks: true }) }}
-                    />
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose text-gray-900 whitespace-pre-wrap">
+                      {post.content}
+                    </ReactMarkdown>
                   )}
                   <p className="text-sm text-gray-500 mt-1">
                     Posted by <span className="font-medium">{post.username}</span>
@@ -277,7 +330,10 @@ const PostList = ({ posts, setPosts, comments, setComments, fetchComments, creat
                     <ul className="space-y-3">
                       {comments.map((comment) => (
                         <li key={comment.id} className="text-sm text-gray-700">
-                          <span className="font-medium">{comment.username}:</span> {comment.content}
+                          <span className="font-medium">{comment.username}:</span>{' '}
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} className="inline prose">
+                            {comment.content}
+                          </ReactMarkdown>
                           <span className="text-gray-500 ml-2">
                             ({new Date(comment.timestamp).toLocaleString('en-US', {
                               year: 'numeric',

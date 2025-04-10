@@ -9,7 +9,7 @@ import Register from './Register';
 import ErrorBoundary from './ErrorBoundary';
 import './index.css';
 
-const apiUrl = 'https://my-worker.africancontent807.workers.dev/';
+const apiUrl = 'https://my-worker.africancontent807.workers.dev/'; // Matches Worker URL
 
 const App = () => {
   const { authState, login, logout, setAuthError } = useContext(MyContext);
@@ -24,8 +24,8 @@ const App = () => {
     const username = localStorage.getItem('username');
     if (token && username && token.split('.').length === 3) {
       login(token, username);
-      fetchPosts(); // Fetch posts on load
-      fetchUserData(); // Fetch user data on load
+      fetchPosts();
+      fetchUserData();
     } else if (token) {
       logout();
     }
@@ -45,7 +45,8 @@ const App = () => {
           navigate('/login');
           return;
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
       setPosts(await response.json());
     } catch (error) {
@@ -68,7 +69,10 @@ const App = () => {
         },
         body: JSON.stringify({ content }),
       });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
       await fetchPosts();
     } catch (error) {
       setAuthError(error.message);
@@ -79,14 +83,17 @@ const App = () => {
   };
 
   const fetchComments = async (postId) => {
-    if (!authState.token || !postId) return; // Only fetch with valid postId
+    if (!authState.token || !postId) return;
     setIsLoading(true);
     try {
       const response = await fetch(`${apiUrl}api/comments?postId=${postId}`, {
         headers: { 'Authorization': `Bearer ${authState.token}` },
       });
       console.log('fetchComments response:', response.status, 'postId:', postId);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
       setComments(await response.json());
     } catch (error) {
       setAuthError(error.message);
@@ -108,7 +115,10 @@ const App = () => {
         },
         body: JSON.stringify({ postId, content }),
       });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
       await fetchComments(postId);
     } catch (error) {
       setAuthError(error.message);
@@ -126,7 +136,10 @@ const App = () => {
         headers: { 'Authorization': `Bearer ${authState.token}` },
       });
       console.log('fetchUserData response:', response.status);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
       setData(await response.json());
     } catch (error) {
       setAuthError(error.message);
@@ -139,7 +152,7 @@ const App = () => {
   const handleLogin = (token, username) => {
     login(token, username);
     fetchPosts();
-    fetchUserData(); // Consistent with useEffect
+    fetchUserData();
     navigate('/');
   };
 
@@ -219,13 +232,15 @@ const LoginForm = ({ handleLogin }) => {
       return;
     }
     try {
+      console.log('Login attempt:', { username });
       const response = await fetch(`${apiUrl}api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
+      console.log('Login fetch response:', { status: response.status, ok: response.ok });
       const data = await response.json();
-      console.log('Login response:', { status: response.status, data });
+      console.log('Login response data:', data);
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
@@ -235,7 +250,7 @@ const LoginForm = ({ handleLogin }) => {
       handleLogin(data.token, data.username);
     } catch (err) {
       console.error('Login error:', err.message);
-      setError(err.message);
+      setError(`Failed to login: ${err.message}`);
     }
   };
 

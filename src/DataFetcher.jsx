@@ -1,71 +1,81 @@
-import React, { useEffect, useState } from 'react';
+// src/DataFetcher.jsx
+import React, { useEffect, useState, useContext } from 'react';
+import { MyContext } from './MyContext';
 
-function DataFetcher() {
-    const apiUrl = import.meta.env.VITE_API_URL; // Backend API URL
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+const DataFetcher = () => {
+  const { authState } = useContext(MyContext); // Access token from context
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://my-worker.africancontent807.workers.dev/'; // Fallback
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            setError(null); // Clear any previous errors
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!authState.token) {
+        setError(new Error('Not authenticated'));
+        setLoading(false);
+        return;
+      }
 
-            try {
-                const response = await fetch(`${apiUrl}/api/data`);
+      setLoading(true);
+      setError(null);
 
-                if (!response.ok) {
-                    // Log the error response body for debugging
-                    const errorText = await response.text();
-                    console.error('API Error:', { status: response.status, body: errorText });
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+      try {
+        const response = await fetch(`${apiUrl}api/data`, {
+          headers: {
+            'Authorization': `Bearer ${authState.token}`, // Add token
+          },
+        });
 
-                const result = await response.json();
-                setData(result);
-            } catch (err) {
-                console.error('Fetch Error:', err);
-                setError(err);
-            } finally {
-                setLoading(false);
-            }
-        };
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', { status: response.status, body: errorText });
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        fetchData();
-    }, [apiUrl]);
+        const result = await response.json();
+        setData(result);
+      } catch (err) {
+        console.error('Fetch Error:', err);
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    if (loading) {
-        return <p>Loading data...</p>;
-    }
+    fetchData();
+  }, [apiUrl, authState.token]); // Depend on token
 
-    if (error) {
-        return (
-            <div>
-                <p>Error fetching data: {error.message}</p>
-                {/* Optionally display more detailed error info in development */}
-                {import.meta.env.DEV && <pre>{JSON.stringify(error, null, 2)}</pre>}
-            </div>
-        );
-    }
+  if (loading) {
+    return <p>Loading data...</p>;
+  }
 
-    if (!data) {
-        return <p>No data available.</p>; // Handle the case where data is still null
-    }
-
+  if (error) {
     return (
-        <div>
-            {/* Display your data here */}
-            {data.length > 0 ? (
-                <ul>
-                    {data.map((item) => (
-                        <li key={item.id}>{item.username} - {item.email}</li> // Assuming 'id', 'username', and 'email' exist. Adapt as needed
-                    ))}
-                </ul>
-            ) : (
-                <p>No data found.</p>
-            )}
-        </div>
+      <div>
+        <p>Error fetching data: {error.message}</p>
+        {import.meta.env.DEV && <pre>{JSON.stringify(error, null, 2)}</pre>}
+      </div>
     );
-}
+  }
+
+  if (!data) {
+    return <p>No data available.</p>;
+  }
+
+  return (
+    <div>
+      {data.length > 0 ? (
+        <ul>
+          {data.map((item) => (
+            <li key={item.id}>{item.username} - {item.email}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>No data found.</p>
+      )}
+    </div>
+  );
+};
 
 export default DataFetcher;

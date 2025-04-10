@@ -13,6 +13,7 @@ const PostList = ({
   createPost,
   currentUsername,
   token,
+  apiUrl, // Add apiUrl prop from App.jsx
 }) => {
   const [newPost, setNewPost] = useState('');
   const [newComment, setNewComment] = useState({});
@@ -20,8 +21,6 @@ const PostList = ({
   const [error, setError] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
   const [editContent, setEditContent] = useState('');
-
-  const workerUrl = 'https://my-worker.africancontent807.workers.dev';
 
   const handlePostSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +30,7 @@ const PostList = ({
     }
     try {
       setError(null);
+      console.log('Creating post with content:', newPost);
       await createPost(newPost);
       setNewPost('');
     } catch (err) {
@@ -47,9 +47,10 @@ const PostList = ({
     }
     try {
       setError(null);
+      console.log('Creating comment for post:', postId, 'Content:', newComment[postId]);
       await createComment(postId, newComment[postId]);
       setNewComment((prev) => ({ ...prev, [postId]: '' }));
-      await fetchComments(postId); // Refresh comments
+      await fetchComments(postId);
     } catch (err) {
       setError('Failed to add comment: ' + (err.message || 'Unknown error'));
       console.error('Comment creation error:', err);
@@ -59,10 +60,11 @@ const PostList = ({
   const toggleComments = async (postId) => {
     if (selectedPostId === postId) {
       setSelectedPostId(null);
-      setComments([]); // Clear comments when hiding
+      setComments([]);
     } else {
       setSelectedPostId(postId);
       try {
+        console.log('Fetching comments for post:', postId);
         await fetchComments(postId);
       } catch (err) {
         setError('Failed to load comments: ' + (err.message || 'Unknown error'));
@@ -106,7 +108,6 @@ const PostList = ({
     }
     setNewPost(newText);
     textarea.focus();
-    // Set cursor position after formatting
     setTimeout(() => {
       const newPos = type === 'link' ? start + 1 : end + (type === 'quote' ? 2 : 2);
       textarea.setSelectionRange(newPos, newPos);
@@ -115,13 +116,14 @@ const PostList = ({
 
   const handleLikePost = async (postId) => {
     try {
-      const response = await fetch(`${workerUrl}/api/posts/${postId}/like`, {
+      console.log('Liking post:', postId);
+      const response = await fetch(`${apiUrl}api/posts/${postId}/like`, { // Use apiUrl prop
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to like post: ${response.status} - ${JSON.stringify(errorData)}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to like post: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       setPosts(posts.map((post) => (post.id === postId ? { ...post, likes: data.likes } : post)));
@@ -138,7 +140,8 @@ const PostList = ({
         return;
       }
       try {
-        const response = await fetch(`${workerUrl}/api/posts/${postId}`, {
+        console.log('Editing post:', postId, 'New content:', editContent);
+        const response = await fetch(`${apiUrl}api/posts/${postId}`, { // Use apiUrl prop
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -147,8 +150,8 @@ const PostList = ({
           body: JSON.stringify({ content: editContent }),
         });
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to edit post: ${errorData.error || response.status}`);
+          const errorText = await response.text();
+          throw new Error(`Failed to edit post: ${response.status} - ${errorText}`);
         }
         const updatedPost = await response.json();
         setPosts(posts.map((post) => (post.id === postId ? updatedPost : post)));
@@ -168,13 +171,14 @@ const PostList = ({
   const handleDeletePost = async (postId) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
       try {
-        const response = await fetch(`${workerUrl}/api/posts/${postId}`, {
+        console.log('Deleting post:', postId);
+        const response = await fetch(`${apiUrl}api/posts/${postId}`, { // Use apiUrl prop
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to delete post: ${errorData.error || response.status}`);
+          const errorText = await response.text();
+          throw new Error(`Failed to delete post: ${response.status} - ${errorText}`);
         }
         setPosts(posts.filter((post) => post.id !== postId));
         if (selectedPostId === postId) setSelectedPostId(null);
@@ -187,13 +191,14 @@ const PostList = ({
 
   const handleLikeComment = async (commentId) => {
     try {
-      const response = await fetch(`${workerUrl}/api/comments/${commentId}/like`, {
+      console.log('Liking comment:', commentId);
+      const response = await fetch(`${apiUrl}api/comments/${commentId}/like`, { // Use apiUrl prop
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to like comment: ${errorData.error || response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to like comment: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       setComments(comments.map((comment) => (comment.id === commentId ? { ...comment, likes: data.likes } : comment)));
@@ -207,57 +212,14 @@ const PostList = ({
     <div className="max-w-2xl mx-auto my-6">
       <h2 className="text-2xl font-bold mb-4">Post Feed</h2>
 
-      {/* Create Post Form */}
       <form onSubmit={handlePostSubmit} className="mb-8">
         <div className="mb-2 flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => addFormatting('bold')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold"
-            title="Bold (Ctrl+B)"
-          >
-            B
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('italic')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic"
-            title="Italic (Ctrl+I)"
-          >
-            I
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('quote')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
-            title="Quote"
-          >
-            Quote
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('code')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
-            title="Inline Code"
-          >
-            {'</>'}
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('link')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
-            title="Insert Link"
-          >
-            🔗
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('underline')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline"
-            title="Underline"
-          >
-            U
-          </button>
+          <button type="button" onClick={() => addFormatting('bold')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold" title="Bold (Ctrl+B)">B</button>
+          <button type="button" onClick={() => addFormatting('italic')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic" title="Italic (Ctrl+I)">I</button>
+          <button type="button" onClick={() => addFormatting('quote')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" title="Quote">Quote</button>
+          <button type="button" onClick={() => addFormatting('code')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono" title="Inline Code">{`</>`}</button>
+          <button type="button" onClick={() => addFormatting('link')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" title="Insert Link">🔗</button>
+          <button type="button" onClick={() => addFormatting('underline')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline" title="Underline">U</button>
         </div>
         <textarea
           id="postTextarea"
@@ -280,7 +242,6 @@ const PostList = ({
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
 
-      {/* Post List */}
       {posts.length === 0 ? (
         <p className="text-gray-600 text-center">No posts available yet. Be the first to post!</p>
       ) : (
@@ -315,30 +276,18 @@ const PostList = ({
                       : ' (time not available)'}
                   </p>
                   <div className="flex space-x-4 mt-2">
-                    <button
-                      onClick={() => handleLikePost(post.id)}
-                      className="text-indigo-600 hover:underline text-sm"
-                    >
+                    <button onClick={() => handleLikePost(post.id)} className="text-indigo-600 hover:underline text-sm">
                       Like ({post.likes || 0})
                     </button>
-                    <button
-                      onClick={() => toggleComments(post.id)}
-                      className="text-indigo-600 hover:underline text-sm"
-                    >
+                    <button onClick={() => toggleComments(post.id)} className="text-indigo-600 hover:underline text-sm">
                       {selectedPostId === post.id ? 'Hide Comments' : 'Show Comments'}
                     </button>
                     {post.username === currentUsername && (
                       <>
-                        <button
-                          onClick={() => handleEditPost(post.id)}
-                          className="text-indigo-600 hover:underline text-sm"
-                        >
+                        <button onClick={() => handleEditPost(post.id)} className="text-indigo-600 hover:underline text-sm">
                           {editingPostId === post.id ? 'Save' : 'Edit'}
                         </button>
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="text-red-600 hover:underline text-sm"
-                        >
+                        <button onClick={() => handleDeletePost(post.id)} className="text-red-600 hover:underline text-sm">
                           Delete
                         </button>
                       </>
@@ -347,7 +296,6 @@ const PostList = ({
                 </div>
               </div>
 
-              {/* Comments Section */}
               {selectedPostId === post.id && (
                 <div className="mt-4 border-t pt-4">
                   {comments && comments.length > 0 ? (
@@ -387,10 +335,7 @@ const PostList = ({
                         type="text"
                         value={newComment[post.id] || ''}
                         onChange={(e) =>
-                          setNewComment((prev) => ({
-                            ...prev,
-                            [post.id]: e.target.value,
-                          }))
+                          setNewComment((prev) => ({ ...prev, [post.id]: e.target.value }))
                         }
                         placeholder="Add a comment..."
                         className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -415,5 +360,4 @@ const PostList = ({
 };
 
 export default PostList;
-
-export { PostList }; // Named export for flexibility
+export { PostList };

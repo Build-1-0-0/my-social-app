@@ -189,25 +189,26 @@ const App = () => {
 
         <Routes>
           <Route
-            path="/"
-            element={
-              authState.isLoggedIn ? (
-                <PostList
-                  posts={posts}
-                  setPosts={setPosts}
-                  comments={comments}
-                  setComments={setComments}
-                  fetchComments={fetchComments}
-                  createComment={createComment}
-                  createPost={createPost}
-                  currentUsername={authState.username}
-                  token={authState.token}
-                />
-              ) : (
-                <h2>Please Login</h2>
-              )
-            }
-          />
+  path="/"
+  element={
+    authState.isLoggedIn ? (
+      <PostList
+        posts={posts}
+        setPosts={setPosts}
+        comments={comments}
+        setComments={setComments}
+        fetchComments={fetchComments}
+        createComment={createComment}
+        createPost={createPost}
+        currentUsername={authState.username}
+        token={authState.token}
+        apiUrl={apiUrl} // Pass apiUrl prop
+      />
+    ) : (
+      <h2>Please Login</h2>
+    )
+  }
+/>
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/login" element={<LoginForm handleLogin={handleLogin} />} />
           <Route path="/register" element={<Register />} />

@@ -6,9 +6,9 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
         const method = request.method;
-        const db = env.DB;
+        const db = env.DB; // D1 binding
         const jwtSecret = env.JWT_SECRET;
-        const allowedOrigin = 'https://my-social-app.pages.dev';
+        const allowedOrigin = 'https://my-social-app.pages.dev'; // Matches Cloudflare Pages
 
         const corsHeaders = {
             'Access-Control-Allow-Origin': allowedOrigin,
@@ -25,29 +25,29 @@ export default {
             new Response(JSON.stringify(data), { status, headers: corsHeaders });
 
         try {
-            console.log(`Incoming request: ${method} ${path}`);
+            console.log(`[${new Date().toISOString()}] ${method} ${path}`);
 
             // USER REGISTRATION
             if (path === '/api/users/register' && method === 'POST') {
-    const { username, email, password, bio, profilePictureUrl } = await request.json();
-    if (!username || !email || !password) {
-        return corsResponse({ error: 'Missing required fields' }, 400);
-    }
-    const existingUser = await db.prepare('SELECT username FROM users WHERE username = ? OR email = ?')
-        .bind(username, email)
-        .first();
-    if (existingUser) {
-        return corsResponse({ error: 'Username or email already exists' }, 409);
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await db.prepare(`
-        INSERT INTO users (username, email, password, bio, profilePictureUrl)
-        VALUES (?, ?, ?, ?, ?)
-    `).bind(username, email, hashedPassword, bio || null, profilePictureUrl || null).run();
-    const token = await jwt.sign({ username }, jwtSecret, { expiresIn: '24h' }); // Add token
-    console.log(`User registered: ${username}`);
-    return corsResponse({ message: 'User registered successfully', token, username }, 201); // Return token
-}
+                const { username, email, password, bio, profilePictureUrl } = await request.json();
+                if (!username || !email || !password) {
+                    return corsResponse({ error: 'Missing required fields' }, 400);
+                }
+                const existingUser = await db.prepare('SELECT username FROM users WHERE username = ? OR email = ?')
+                    .bind(username, email)
+                    .first();
+                if (existingUser) {
+                    return corsResponse({ error: 'Username or email already exists' }, 409);
+                }
+                const hashedPassword = await bcrypt.hash(password, 10);
+                await db.prepare(`
+                    INSERT INTO users (username, email, password, bio, profilePictureUrl)
+                    VALUES (?, ?, ?, ?, ?)
+                `).bind(username, email, hashedPassword, bio || null, profilePictureUrl || null).run();
+                const token = await jwt.sign({ username }, jwtSecret, { expiresIn: '24h' });
+                console.log(`User registered: ${username}`);
+                return corsResponse({ message: 'User registered successfully', token, username }, 201);
+            }
 
             // USER LOGIN
             else if (path === '/api/users/login' && method === 'POST') {
@@ -133,7 +133,7 @@ export default {
                 if (!post) return corsResponse({ error: 'Post not found' }, 404);
                 if (post.username !== extractedUsername) return corsResponse({ error: 'Unauthorized' }, 403);
                 await db.prepare('DELETE FROM posts WHERE id = ?').bind(postId).run();
-                await db.prepare('DELETE FROM comments WHERE postId = ?').bind(postId).run(); // Cascade delete comments
+                await db.prepare('DELETE FROM comments WHERE postId = ?').bind(postId).run();
                 console.log(`Post ${postId} deleted by ${extractedUsername}`);
                 return corsResponse({ message: 'Post deleted' });
             }
@@ -207,7 +207,7 @@ export default {
 
             return corsResponse({ message: 'Not found' }, 404);
         } catch (error) {
-            console.error("Server error:", error);
+            console.error(`Server error at ${path}:`, error.message);
             return corsResponse({ error: 'Server error', details: error.message }, 500);
         }
     },

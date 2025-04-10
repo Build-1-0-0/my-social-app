@@ -5,7 +5,7 @@ import { MyContext } from './MyContext';
 import PostList from './PostList';
 import ProfilePage from './ProfilePage';
 import UserTable from './UserTable';
-import Register from './Register'; // Import Register
+import Register from './Register';
 import ErrorBoundary from './ErrorBoundary';
 import './index.css';
 
@@ -24,9 +24,8 @@ const App = () => {
     const username = localStorage.getItem('username');
     if (token && username && token.split('.').length === 3) {
       login(token, username);
-      fetchPosts();
-      fetchComments();
-      fetchUserData();
+      fetchPosts(); // Fetch posts on load
+      fetchUserData(); // Fetch user data on load
     } else if (token) {
       logout();
     }
@@ -39,6 +38,7 @@ const App = () => {
       const response = await fetch(`${apiUrl}api/posts`, {
         headers: { 'Authorization': `Bearer ${authState.token}` },
       });
+      console.log('fetchPosts response:', response.status);
       if (!response.ok) {
         if (response.status === 401) {
           logout();
@@ -78,13 +78,14 @@ const App = () => {
     }
   };
 
-  const fetchComments = async (postId = '') => {
-    if (!authState.token) return;
+  const fetchComments = async (postId) => {
+    if (!authState.token || !postId) return; // Only fetch with valid postId
     setIsLoading(true);
     try {
-      const response = await fetch(`${apiUrl}api/comments${postId ? `?postId=${postId}` : ''}`, {
+      const response = await fetch(`${apiUrl}api/comments?postId=${postId}`, {
         headers: { 'Authorization': `Bearer ${authState.token}` },
       });
+      console.log('fetchComments response:', response.status, 'postId:', postId);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       setComments(await response.json());
     } catch (error) {
@@ -124,6 +125,7 @@ const App = () => {
       const response = await fetch(`${apiUrl}api/data`, {
         headers: { 'Authorization': `Bearer ${authState.token}` },
       });
+      console.log('fetchUserData response:', response.status);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       setData(await response.json());
     } catch (error) {
@@ -137,8 +139,7 @@ const App = () => {
   const handleLogin = (token, username) => {
     login(token, username);
     fetchPosts();
-    fetchComments();
-    fetchUserData();
+    fetchUserData(); // Consistent with useEffect
     navigate('/');
   };
 
@@ -164,7 +165,7 @@ const App = () => {
             ) : (
               <>
                 <li><Link to="/login">Login</Link></li>
-                <li><Link to="/register">Register</Link></li> {/* Add Register link */}
+                <li><Link to="/register">Register</Link></li>
               </>
             )}
           </ul>
@@ -196,7 +197,7 @@ const App = () => {
           />
           <Route path="/profile/:username" element={<ProfilePage />} />
           <Route path="/login" element={<LoginForm handleLogin={handleLogin} />} />
-          <Route path="/register" element={<Register />} /> {/* Add Register route */}
+          <Route path="/register" element={<Register />} />
         </Routes>
 
         {authState.isLoggedIn && data && <UserTable data={data} />}

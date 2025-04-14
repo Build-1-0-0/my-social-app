@@ -3,9 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 const PostList = ({
-  posts = [], // Default to empty array
+  posts = [],
   setPosts,
-  comments = [], // Default to empty array
+  comments = [],
   setComments,
   fetchComments,
   createComment,
@@ -15,7 +15,7 @@ const PostList = ({
   apiUrl,
 }) => {
   const [newPost, setNewPost] = useState('');
-  const [newComment, setNewComment] = useState({}); // Already an object
+  const [newComment, setNewComment] = useState({});
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [error, setError] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
@@ -31,7 +31,6 @@ const PostList = ({
       setError(null);
       console.log('Creating post with content:', newPost);
       const newPostData = await createPost(newPost);
-      // Ensure new post is added correctly
       setPosts((prev) => [newPostData, ...(Array.isArray(prev) ? prev : [])]);
       setNewPost('');
     } catch (err) {
@@ -62,7 +61,7 @@ const PostList = ({
   const toggleComments = async (postId) => {
     if (selectedPostId === postId) {
       setSelectedPostId(null);
-      setComments([]); // Clear comments safely
+      setComments([]);
     } else {
       setSelectedPostId(postId);
       try {
@@ -71,7 +70,7 @@ const PostList = ({
       } catch (err) {
         setError('Failed to load comments: ' + (err.message || 'Unknown error'));
         console.error('Comment fetch error:', err);
-        setComments([]); // Reset on error
+        setComments([]);
       }
     }
   };
@@ -230,77 +229,81 @@ const PostList = ({
     <div className="max-w-2xl mx-auto my-6">
       <h2 className="text-2xl font-bold mb-4">Post Feed</h2>
 
-      <form onSubmit={handlePostSubmit} className="mb-8">
-        <div className="mb-2 flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={() => addFormatting('bold')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold"
-            title="Bold (Ctrl+B)"
-          >
-            B
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('italic')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic"
-            title="Italic (Ctrl+I)"
-          >
-            I
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('quote')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
-            title="Quote"
-          >
-            Quote
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('code')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
-            title="Inline Code"
-          >
-            {`</>`}
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('link')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
-            title="Insert Link"
-          >
-            🔗
-          </button>
-          <button
-            type="button"
-            onClick={() => addFormatting('underline')}
-            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline"
-            title="Underline"
-          >
-            U
-          </button>
-        </div>
-        <textarea
-          id="postTextarea"
-          value={newPost}
-          onChange={(e) => setNewPost(e.target.value)}
-          placeholder="What's on your mind? Use Markdown: **bold**, *italic*, > quote, `code`, [link](url), <u>underline</u>"
-          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[100px]"
-          maxLength={1120}
-        />
-        <div className="flex justify-between items-center mt-2">
-          <span className="text-sm text-gray-500">{newPost.length}/1120</span>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
-            disabled={!newPost.trim()}
-          >
-            Post
-          </button>
-        </div>
-        {error && <p className="text-red-600 mt-2">{error}</p>}
-      </form>
+      {token ? (
+        <form onSubmit={handlePostSubmit} className="mb-8">
+          <div className="mb-2 flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => addFormatting('bold')}
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold"
+              title="Bold (Ctrl+B)"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => addFormatting('italic')}
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic"
+              title="Italic (Ctrl+I)"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => addFormatting('quote')}
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
+              title="Quote"
+            >
+              Quote
+            </button>
+            <button
+              type="button"
+              onClick={() => addFormatting('code')}
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
+              title="Inline Code"
+            >
+              {`</>`}
+            </button>
+            <button
+              type="button"
+              onClick={() => addFormatting('link')}
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
+              title="Insert Link"
+            >
+              🔗
+            </button>
+            <button
+              type="button"
+              onClick={() => addFormatting('underline')}
+              className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline"
+              title="Underline"
+            >
+              U
+            </button>
+          </div>
+          <textarea
+            id="postTextarea"
+            value={newPost}
+            onChange={(e) => setNewPost(e.target.value)}
+            placeholder="What's on your mind? Use Markdown: **bold**, *italic*, > quote, `code`, [link](url), <u>underline</u>"
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y min-h-[100px]"
+            maxLength={1120}
+          />
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-sm text-gray-500">{newPost.length}/1120</span>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
+              disabled={!newPost.trim()}
+            >
+              Post
+            </button>
+          </div>
+          {error && <p className="text-red-600 mt-2">{error}</p>}
+        </form>
+      ) : (
+        <p className="text-gray-600 mb-8">Please log in to post.</p>
+      )}
 
       {!Array.isArray(posts) || posts.length === 0 ? (
         <p className="text-gray-600 text-center">No posts available yet. Be the first to post!</p>
@@ -342,6 +345,7 @@ const PostList = ({
                     <button
                       onClick={() => handleLikePost(post.id)}
                       className="text-indigo-600 hover:underline text-sm"
+                      disabled={!token}
                     >
                       Like ({post.likes || 0})
                     </button>
@@ -351,7 +355,7 @@ const PostList = ({
                     >
                       {selectedPostId === post.id ? 'Hide Comments' : 'Show Comments'}
                     </button>
-                    {post.username === currentUsername && (
+                    {post.username === currentUsername && token && (
                       <>
                         <button
                           onClick={() => handleEditPost(post.id)}
@@ -396,6 +400,7 @@ const PostList = ({
                           <button
                             onClick={() => handleLikeComment(comment.id)}
                             className="ml-2 text-indigo-600 hover:underline"
+                            disabled={!token}
                           >
                             Like ({comment.likes || 0})
                           </button>
@@ -406,26 +411,28 @@ const PostList = ({
                     <p className="text-gray-600 text-sm">No comments yet.</p>
                   )}
 
-                  <form onSubmit={(e) => handleCommentSubmit(post.id, e)} className="mt-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={newComment[post.id] || ''}
-                        onChange={(e) =>
-                          setNewComment((prev) => ({ ...prev, [post.id]: e.target.value }))
-                        }
-                        placeholder="Add a comment..."
-                        className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <button
-                        type="submit"
-                        className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
-                        disabled={!(newComment[post.id] || '').trim()}
-                      >
-                        Comment
-                      </button>
-                    </div>
-                  </form>
+                  {token && (
+                    <form onSubmit={(e) => handleCommentSubmit(post.id, e)} className="mt-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          value={newComment[post.id] || ''}
+                          onChange={(e) =>
+                            setNewComment((prev) => ({ ...prev, [post.id]: e.target.value }))
+                          }
+                          placeholder="Add a comment..."
+                          className="flex-1 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button
+                          type="submit"
+                          className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
+                          disabled={!(newComment[post.id] || '').trim()}
+                        >
+                          Comment
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
               )}
             </div>

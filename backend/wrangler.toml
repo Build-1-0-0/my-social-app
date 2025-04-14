@@ -1,11 +1,8 @@
 name = "my-worker"
 main = "index.js"
-compatibility_date = "2025-04-02"
+compatibility_date = "2025-04-13"
 
 compatibility_flags = ["nodejs_compat"]
-
-[vars]
-JWT_SECRET = "123456789123456789"
 
 [[d1_databases]]
 binding = "DB"

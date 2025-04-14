@@ -12,6 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Clear error when component mounts
     setAuthError(null);
   }, [setAuthError]);
 
@@ -36,7 +37,7 @@ const Login = () => {
       console.log('Login response:', { status: response.status, data });
 
       if (!response.ok) {
-        throw new Error(data.error || `Login failed: ${response.status}`);
+        throw new Error(data.error || `Login failed with status ${response.status}`);
       }
 
       if (!data.token || data.token.split('.').length !== 3) {
@@ -45,19 +46,19 @@ const Login = () => {
 
       login(data.token, data.username);
       navigate('/');
-    } catch (err) {
-      console.error('Login error:', err.message);
-      setAuthError(err.message);
+    } catch (error) {
+      console.error('Login error:', error.message);
+      setAuthError(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-xl">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Login</h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="max-w-md mx-auto my-8">
+      <div className="bg-white p-8 rounded-lg shadow-lg">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="username" className="block text-sm font-medium text-gray-700">
               Username
@@ -67,13 +68,12 @@ const Login = () => {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Enter username"
               required
               aria-invalid={!!authState.error}
             />
           </div>
-
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Password
@@ -83,32 +83,30 @@ const Login = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              className="mt-1 w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Enter password"
               required
               aria-invalid={!!authState.error}
             />
           </div>
-
           {authState.error && (
             <div
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+              className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg"
               role="alert"
             >
               {authState.error}
             </div>
           )}
-
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition disabled:bg-gray-400"
-            aria-label="Submit login form"
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+            aria-label="Login"
           >
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-4 text-center text-gray-600">
           Don't have an account?{' '}
           <Link to="/register" className="text-indigo-600 hover:underline">
             Register

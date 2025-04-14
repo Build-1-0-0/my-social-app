@@ -1,18 +1,18 @@
 {
-  "name": "my-social-app-worker",
-  "version": "0.0.1",
+  "name": "my-worker",
+  "version": "1.0.0",
   "private": true,
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy --name my-social-app-worker"
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
   },
   "dependencies": {
-    "@tsndr/cloudflare-worker-jwt": "^2.2.1",
     "bcryptjs": "^2.4.3",
-    "itty-router": "^5.0.18"
+    "itty-router": "^5.0.18",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "wrangler": "^3.78.7"
+    "wrangler": "^4.10.0"
   }
 }

@@ -6,7 +6,7 @@ import App from './App.jsx';
 import { MyContextProvider } from './MyContext.jsx';
 import './index.css';
 
-// Simple error boundary
+// Error boundary
 class ErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 

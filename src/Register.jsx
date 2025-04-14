@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 import { MyContext } from './MyContext';
 
 const apiUrl = 'https://my-worker.africancontent807.workers.dev/';

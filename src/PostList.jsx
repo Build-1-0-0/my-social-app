@@ -1,22 +1,21 @@
-// src/PostList.jsx
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 const PostList = ({
-  posts,
+  posts = [], // Default to empty array
   setPosts,
-  comments,
+  comments = [], // Default to empty array
   setComments,
   fetchComments,
   createComment,
   createPost,
   currentUsername,
   token,
-  apiUrl, // Add apiUrl prop from App.jsx
+  apiUrl,
 }) => {
   const [newPost, setNewPost] = useState('');
-  const [newComment, setNewComment] = useState({});
+  const [newComment, setNewComment] = useState({}); // Already an object
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [error, setError] = useState(null);
   const [editingPostId, setEditingPostId] = useState(null);
@@ -31,7 +30,9 @@ const PostList = ({
     try {
       setError(null);
       console.log('Creating post with content:', newPost);
-      await createPost(newPost);
+      const newPostData = await createPost(newPost);
+      // Ensure new post is added correctly
+      setPosts((prev) => [newPostData, ...(Array.isArray(prev) ? prev : [])]);
       setNewPost('');
     } catch (err) {
       setError('Failed to create post: ' + (err.message || 'Unknown error'));
@@ -41,14 +42,15 @@ const PostList = ({
 
   const handleCommentSubmit = async (postId, e) => {
     e.preventDefault();
-    if (!newComment[postId]?.trim()) {
+    const commentText = newComment[postId] || '';
+    if (!commentText.trim()) {
       setError('Comment cannot be empty');
       return;
     }
     try {
       setError(null);
-      console.log('Creating comment for post:', postId, 'Content:', newComment[postId]);
-      await createComment(postId, newComment[postId]);
+      console.log('Creating comment for post:', postId, 'Content:', commentText);
+      await createComment(postId, commentText);
       setNewComment((prev) => ({ ...prev, [postId]: '' }));
       await fetchComments(postId);
     } catch (err) {
@@ -60,7 +62,7 @@ const PostList = ({
   const toggleComments = async (postId) => {
     if (selectedPostId === postId) {
       setSelectedPostId(null);
-      setComments([]);
+      setComments([]); // Clear comments safely
     } else {
       setSelectedPostId(postId);
       try {
@@ -69,12 +71,14 @@ const PostList = ({
       } catch (err) {
         setError('Failed to load comments: ' + (err.message || 'Unknown error'));
         console.error('Comment fetch error:', err);
+        setComments([]); // Reset on error
       }
     }
   };
 
   const addFormatting = (type) => {
     const textarea = document.getElementById('postTextarea');
+    if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = newPost;
@@ -117,16 +121,20 @@ const PostList = ({
   const handleLikePost = async (postId) => {
     try {
       console.log('Liking post:', postId);
-      const response = await fetch(`${apiUrl}api/posts/${postId}/like`, { // Use apiUrl prop
+      const response = await fetch(`${apiUrl}api/posts/${postId}/like`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to like post: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
-      setPosts(posts.map((post) => (post.id === postId ? { ...post, likes: data.likes } : post)));
+      setPosts((prev) =>
+        Array.isArray(prev)
+          ? prev.map((post) => (post.id === postId ? { ...post, likes: data.likes } : post))
+          : []
+      );
     } catch (err) {
       setError('Failed to like post: ' + (err.message || 'Unknown error'));
       console.error('Like post error:', err);
@@ -141,10 +149,10 @@ const PostList = ({
       }
       try {
         console.log('Editing post:', postId, 'New content:', editContent);
-        const response = await fetch(`${apiUrl}api/posts/${postId}`, { // Use apiUrl prop
+        const response = await fetch(`${apiUrl}api/posts/${postId}`, {
           method: 'PUT',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ content: editContent }),
@@ -154,7 +162,11 @@ const PostList = ({
           throw new Error(`Failed to edit post: ${response.status} - ${errorText}`);
         }
         const updatedPost = await response.json();
-        setPosts(posts.map((post) => (post.id === postId ? updatedPost : post)));
+        setPosts((prev) =>
+          Array.isArray(prev)
+            ? prev.map((post) => (post.id === postId ? updatedPost : post))
+            : []
+        );
         setEditingPostId(null);
         setEditContent('');
       } catch (err) {
@@ -163,8 +175,10 @@ const PostList = ({
       }
     } else {
       const post = posts.find((p) => p.id === postId);
-      setEditingPostId(postId);
-      setEditContent(post.content);
+      if (post) {
+        setEditingPostId(postId);
+        setEditContent(post.content);
+      }
     }
   };
 
@@ -172,15 +186,15 @@ const PostList = ({
     if (window.confirm('Are you sure you want to delete this post?')) {
       try {
         console.log('Deleting post:', postId);
-        const response = await fetch(`${apiUrl}api/posts/${postId}`, { // Use apiUrl prop
+        const response = await fetch(`${apiUrl}api/posts/${postId}`, {
           method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Failed to delete post: ${response.status} - ${errorText}`);
         }
-        setPosts(posts.filter((post) => post.id !== postId));
+        setPosts((prev) => (Array.isArray(prev) ? prev.filter((post) => post.id !== postId) : []));
         if (selectedPostId === postId) setSelectedPostId(null);
       } catch (err) {
         setError('Failed to delete post: ' + (err.message || 'Unknown error'));
@@ -192,16 +206,20 @@ const PostList = ({
   const handleLikeComment = async (commentId) => {
     try {
       console.log('Liking comment:', commentId);
-      const response = await fetch(`${apiUrl}api/comments/${commentId}/like`, { // Use apiUrl prop
+      const response = await fetch(`${apiUrl}api/comments/${commentId}/like`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to like comment: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
-      setComments(comments.map((comment) => (comment.id === commentId ? { ...comment, likes: data.likes } : comment)));
+      setComments((prev) =>
+        Array.isArray(prev)
+          ? prev.map((comment) => (comment.id === commentId ? { ...comment, likes: data.likes } : comment))
+          : []
+      );
     } catch (err) {
       setError('Failed to like comment: ' + (err.message || 'Unknown error'));
       console.error('Like comment error:', err);
@@ -214,12 +232,54 @@ const PostList = ({
 
       <form onSubmit={handlePostSubmit} className="mb-8">
         <div className="mb-2 flex items-center space-x-2">
-          <button type="button" onClick={() => addFormatting('bold')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold" title="Bold (Ctrl+B)">B</button>
-          <button type="button" onClick={() => addFormatting('italic')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic" title="Italic (Ctrl+I)">I</button>
-          <button type="button" onClick={() => addFormatting('quote')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" title="Quote">Quote</button>
-          <button type="button" onClick={() => addFormatting('code')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono" title="Inline Code">{`</>`}</button>
-          <button type="button" onClick={() => addFormatting('link')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200" title="Insert Link">🔗</button>
-          <button type="button" onClick={() => addFormatting('underline')} className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline" title="Underline">U</button>
+          <button
+            type="button"
+            onClick={() => addFormatting('bold')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-bold"
+            title="Bold (Ctrl+B)"
+          >
+            B
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('italic')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 italic"
+            title="Italic (Ctrl+I)"
+          >
+            I
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('quote')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            title="Quote"
+          >
+            Quote
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('code')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 font-mono"
+            title="Inline Code"
+          >
+            {`</>`}
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('link')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200"
+            title="Insert Link"
+          >
+            🔗
+          </button>
+          <button
+            type="button"
+            onClick={() => addFormatting('underline')}
+            className="px-2 py-1 bg-gray-100 rounded hover:bg-gray-200 underline"
+            title="Underline"
+          >
+            U
+          </button>
         </div>
         <textarea
           id="postTextarea"
@@ -242,7 +302,7 @@ const PostList = ({
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>
 
-      {posts.length === 0 ? (
+      {!Array.isArray(posts) || posts.length === 0 ? (
         <p className="text-gray-600 text-center">No posts available yet. Be the first to post!</p>
       ) : (
         <div className="space-y-6">
@@ -258,7 +318,10 @@ const PostList = ({
                       rows="3"
                     />
                   ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose text-gray-900 whitespace-pre-wrap">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      className="prose text-gray-900 whitespace-pre-wrap"
+                    >
                       {post.content}
                     </ReactMarkdown>
                   )}
@@ -276,18 +339,30 @@ const PostList = ({
                       : ' (time not available)'}
                   </p>
                   <div className="flex space-x-4 mt-2">
-                    <button onClick={() => handleLikePost(post.id)} className="text-indigo-600 hover:underline text-sm">
+                    <button
+                      onClick={() => handleLikePost(post.id)}
+                      className="text-indigo-600 hover:underline text-sm"
+                    >
                       Like ({post.likes || 0})
                     </button>
-                    <button onClick={() => toggleComments(post.id)} className="text-indigo-600 hover:underline text-sm">
+                    <button
+                      onClick={() => toggleComments(post.id)}
+                      className="text-indigo-600 hover:underline text-sm"
+                    >
                       {selectedPostId === post.id ? 'Hide Comments' : 'Show Comments'}
                     </button>
                     {post.username === currentUsername && (
                       <>
-                        <button onClick={() => handleEditPost(post.id)} className="text-indigo-600 hover:underline text-sm">
+                        <button
+                          onClick={() => handleEditPost(post.id)}
+                          className="text-indigo-600 hover:underline text-sm"
+                        >
                           {editingPostId === post.id ? 'Save' : 'Edit'}
                         </button>
-                        <button onClick={() => handleDeletePost(post.id)} className="text-red-600 hover:underline text-sm">
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          className="text-red-600 hover:underline text-sm"
+                        >
                           Delete
                         </button>
                       </>
@@ -298,7 +373,7 @@ const PostList = ({
 
               {selectedPostId === post.id && (
                 <div className="mt-4 border-t pt-4">
-                  {comments && comments.length > 0 ? (
+                  {Array.isArray(comments) && comments.length > 0 ? (
                     <ul className="space-y-3">
                       {comments.map((comment) => (
                         <li key={comment.id} className="text-sm text-gray-700">
@@ -307,14 +382,16 @@ const PostList = ({
                             {comment.content}
                           </ReactMarkdown>
                           <span className="text-gray-500 ml-2">
-                            ({new Date(comment.timestamp).toLocaleString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true,
-                            })})
+                            {comment.timestamp
+                              ? `(${new Date(comment.timestamp).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                })})`
+                              : '(time not available)'}
                           </span>
                           <button
                             onClick={() => handleLikeComment(comment.id)}
@@ -343,7 +420,7 @@ const PostList = ({
                       <button
                         type="submit"
                         className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400"
-                        disabled={!newComment[post.id]?.trim()}
+                        disabled={!(newComment[post.id] || '').trim()}
                       >
                         Comment
                       </button>

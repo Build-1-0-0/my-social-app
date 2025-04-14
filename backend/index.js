@@ -6,9 +6,9 @@ export default {
         const url = new URL(request.url);
         const path = url.pathname;
         const method = request.method;
-        const db = env.DB; // D1 binding
+        const db = env.DB;
         const jwtSecret = env.JWT_SECRET;
-        const allowedOrigin = 'https://my-social-app.pages.dev'; // Matches Cloudflare Pages
+        const allowedOrigin = 'https://my-social-app.pages.dev';
 
         const corsHeaders = {
             'Access-Control-Allow-Origin': allowedOrigin,
@@ -66,17 +66,126 @@ export default {
                 return corsResponse({ message: 'Login successful', token, username: user.username });
             }
 
+            // UPLOAD MEDIA TO B2
+            else if (path === '/api/upload' && method === 'POST') {
+                const { extractedUsername, authError } = await verifyToken(request, jwtSecret);
+                if (authError) return corsResponse(authError, 401);
+
+                const formData = await request.formData();
+                const file = formData.get('file');
+                if (!file) return corsResponse({ error: 'File is required' }, 400);
+
+                // Limit size to 100MB
+                if (file.size > 100 * 1024 * 1024) {
+                    return corsResponse({ error: 'File exceeds 100MB' }, 400);
+                }
+
+                // Authenticate B2
+                const authResponse = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+                    headers: {
+                        Authorization: `Basic ${btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`)}`
+                    }
+                });
+                const authData = await authResponse.json();
+                if (!authData.authorizationToken) {
+                    return corsResponse({ error: 'B2 auth failed' }, 500);
+                }
+
+                // Get upload URL
+                const uploadUrlResponse = await fetch(`${authData.apiUrl}/b2api/v2/b2_get_upload_url`, {
+                    method: 'POST',
+                    headers: { Authorization: authData.authorizationToken },
+                    body: JSON.stringify({ bucketId: authData.allowed.bucketId })
+                });
+                const uploadUrlData = await uploadUrlResponse.json();
+
+                // Upload file
+                const mediaId = `${extractedUsername}-${Date.now()}-${file.name}`;
+                const uploadResponse = await fetch(uploadUrlData.uploadUrl, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: uploadUrlData.authorizationToken,
+                        'Content-Type': file.type,
+                        'X-Bz-File-Name': encodeURIComponent(mediaId),
+                        'X-Bz-Content-Sha1': 'do_not_verify',
+                        'X-Bz-Server-Side-Encryption': 'AES256'
+                    },
+                    body: file.stream()
+                });
+                const uploadData = await uploadResponse.json();
+                if (!uploadData.fileId) {
+                    return corsResponse({ error: 'Upload failed' }, 500);
+                }
+
+                // Save to D1
+                await db.prepare(`
+                    INSERT INTO media (username, media_id, mime_type, created_at)
+                    VALUES (?, ?, ?, ?)
+                `).bind(extractedUsername, mediaId, file.type, new Date().toISOString()).run();
+
+                // Presigned URL
+                const presignedUrl = `${authData.downloadUrl}/file/${env.B2_BUCKET_NAME}/${encodeURIComponent(mediaId)}?Authorization=${authData.authorizationToken}`;
+
+                console.log(`Media uploaded by ${extractedUsername}: ${mediaId}`);
+                return corsResponse({ media_id: mediaId, url: presignedUrl, message: 'Uploaded' }, 201);
+            }
+
+            // RETRIEVE MEDIA FROM B2
+            else if (path.startsWith('/api/media/') && method === 'GET') {
+                const { extractedUsername, authError } = await verifyToken(request, jwtSecret);
+                if (authError) return corsResponse(authError, 401);
+
+                const mediaId = path.split('/')[3];
+                const media = await db.prepare('SELECT media_id, mime_type, username FROM media WHERE media_id = ?')
+                    .bind(mediaId)
+                    .first();
+
+                if (!media) {
+                    return corsResponse({ error: 'Media not found' }, 404);
+                }
+
+                // Restrict to owner
+                if (media.username !== extractedUsername) {
+                    return corsResponse({ error: 'Unauthorized' }, 403);
+                }
+
+                // Authenticate B2
+                const authResponse = await fetch('https://api.backblazeb2.com/b2api/v2/b2_authorize_account', {
+                    headers: {
+                        Authorization: `Basic ${btoa(`${env.B2_KEY_ID}:${env.B2_APPLICATION_KEY}`)}`
+                    }
+                });
+                const authData = await authResponse.json();
+                if (!authData.authorizationToken) {
+                    return corsResponse({ error: 'B2 auth failed' }, 500);
+                }
+
+                // Presigned URL
+                const presignedUrl = `${authData.downloadUrl}/file/${env.B2_BUCKET_NAME}/${encodeURIComponent(media.media_id)}?Authorization=${authData.authorizationToken}`;
+
+                return corsResponse({ url: presignedUrl, mime_type: media.mime_type });
+            }
+
             // POST CREATION
             else if (path === '/api/posts' && method === 'POST') {
                 const { extractedUsername, authError } = await verifyToken(request, jwtSecret);
                 if (authError) return corsResponse(authError, 401);
-                const { content } = await request.json();
+                const { content, mediaId } = await request.json();
                 if (!content) return corsResponse({ error: 'Content is required' }, 400);
+                let media = null;
+                if (mediaId) {
+                    media = await db.prepare('SELECT media_id, username FROM media WHERE media_id = ?')
+                        .bind(mediaId)
+                        .first();
+                    if (!media || media.username !== extractedUsername) {
+                        return corsResponse({ error: 'Invalid or unauthorized media' }, 400);
+                    }
+                }
                 const result = await db.prepare(`
-                    INSERT INTO posts (username, content, created_at, likes)
-                    VALUES (?, ?, datetime('now'), 0)
-                    RETURNING id, username, content, created_at, likes
-                `).bind(extractedUsername, content).first();
+                    INSERT INTO posts (username, content, media_id, created_at, likes)
+                    VALUES (?, ?, ?, datetime('now'), 0)
+                    RETURNING id, username, content, media_id, created_at, likes
+                `).bind(extractedUsername, content, mediaId || null).first();
                 console.log('Post created:', result);
                 return corsResponse(result, 201);
             }
@@ -84,7 +193,7 @@ export default {
             // GET ALL POSTS
             else if (path === '/api/posts' && method === 'GET') {
                 const results = await db.prepare(`
-                    SELECT id, username, content, created_at, likes 
+                    SELECT id, username, content, media_id, created_at, likes 
                     FROM posts 
                     ORDER BY created_at DESC
                 `).all();
@@ -109,15 +218,24 @@ export default {
                 const { extractedUsername, authError } = await verifyToken(request, jwtSecret);
                 if (authError) return corsResponse(authError, 401);
                 const postId = path.split('/')[3];
-                const { content } = await request.json();
+                const { content, mediaId } = await request.json();
                 if (!content) return corsResponse({ error: 'Content is required' }, 400);
                 const post = await db.prepare('SELECT username FROM posts WHERE id = ?').bind(postId).first();
                 if (!post) return corsResponse({ error: 'Post not found' }, 404);
                 if (post.username !== extractedUsername) return corsResponse({ error: 'Unauthorized' }, 403);
-                await db.prepare('UPDATE posts SET content = ?, created_at = datetime("now") WHERE id = ?')
-                    .bind(content, postId)
+                let media = null;
+                if (mediaId) {
+                    media = await db.prepare('SELECT media_id, username FROM media WHERE media_id = ?')
+                        .bind(mediaId)
+                        .first();
+                    if (!media || media.username !== extractedUsername) {
+                        return corsResponse({ error: 'Invalid or unauthorized media' }, 400);
+                    }
+                }
+                await db.prepare('UPDATE posts SET content = ?, media_id = ?, created_at = datetime("now") WHERE id = ?')
+                    .bind(content, mediaId || null, postId)
                     .run();
-                const updatedPost = await db.prepare('SELECT id, username, content, created_at, likes FROM posts WHERE id = ?')
+                const updatedPost = await db.prepare('SELECT id, username, content, media_id, created_at, likes FROM posts WHERE id = ?')
                     .bind(postId)
                     .first();
                 console.log(`Post ${postId} edited by ${extractedUsername}`);

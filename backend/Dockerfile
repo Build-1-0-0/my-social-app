@@ -1,20 +1,18 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Use Node.js 22 to match deployment logs
+FROM node:22-slim
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
-COPY package*.json ./
-
-# Install dependencies
+# Copy package.json and install dependencies
+COPY package.json .
 RUN npm install
 
-# Copy the rest of the application files to the working directory
+# Copy all files
 COPY . .
 
-# Expose the port your app listens on
-EXPOSE 3001
+# Expose default Wrangler dev port
+EXPOSE 8787
 
-# Define the command to run your application
-CMD [ "node", "index.js" ]
+# Run Wrangler dev for local development
+CMD ["npm", "run", "dev"]

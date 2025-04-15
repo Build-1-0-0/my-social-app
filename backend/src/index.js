@@ -1,5 +1,5 @@
 import { Router } from 'itty-router';
-import { handleCors } from './utils/cors';
+import { handleCors, corsHeaders } from './utils/cors';
 import { login, register } from './routes/auth';
 import { createPost, getPosts, likePost, updatePost, deletePost } from './routes/posts';
 import { createComment, getComments, likeComment } from './routes/comments';
@@ -39,18 +39,38 @@ router.post('/api/media', uploadMedia);
 // Data route
 router.get('/api/data', getData);
 
+// 404 fallback
+router.all('*', () =>
+  new Response(JSON.stringify({ error: 'Not Found' }), {
+    status: 404,
+    headers: {
+      'Content-Type': 'application/json',
+      ...corsHeaders,
+    },
+  })
+);
+
 export default {
-  fetch: async (request, env, ctx) => {
+  async fetch(request, env, ctx) {
     try {
-      // Apply CORS headers to all responses
-      return await router.handle(request, env, ctx).then(handleCors);
+      const response = await router.handle(request, env, ctx);
+      if (!response) {
+        return new Response(JSON.stringify({ error: 'No response from router' }), {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        });
+      }
+      return await handleCors(request)(response);
     } catch (err) {
       console.error('Router error:', err);
-      return new Response(JSON.stringify({ error: err.message || 'Server error' }), {
+      return new Response(JSON.stringify({ error: err.message || 'Internal Server Error' }), {
         status: 500,
         headers: {
           'Content-Type': 'application/json',
-          ...handleCors().headers,
+          ...corsHeaders,
         },
       });
     }

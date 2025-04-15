@@ -1,106 +1,125 @@
-import { verifyToken } from '../utils/auth';
 import { corsHeaders } from '../utils/cors';
+import { authenticate } from '../utils/auth';
 
-export function registerCommentRoutes(router) {
-  router.get('/api/comments', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+export async function createComment(request, env) {
+  try {
+    const payload = authenticate(request, env);
+    const { postId, content } = await request.json();
+    if (!postId || !content?.trim()) {
+      return new Response(JSON.stringify({ error: 'Post ID and content required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
 
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const postId = request.query.postId;
-      if (!postId) {
-        return new Response(JSON.stringify({ error: 'Post ID is required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
+    const post = await env.social_app_db
+      .prepare('SELECT id FROM posts WHERE id = ?')
+      .bind(postId)
+      .first();
+    if (!post) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
 
-      const comments = await env.DB.prepare(
-        'SELECT id, postId, username, content, timestamp, likes FROM comments WHERE postId = ? ORDER BY timestamp ASC'
+    const commentId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    await env.social_app_db
+      .prepare(
+        'INSERT INTO comments (id, post_id, user_id, username, content, created_at, likes) VALUES (?, ?, ?, ?, ?, ?, ?)'
       )
-        .bind(postId)
-        .all();
+      .bind(commentId, postId, payload.userId, payload.username, content, createdAt, 0)
+      .run();
 
-      return new Response(JSON.stringify(comments.results), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Get comments error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to fetch comments: ' + error.message }), {
-        status: 500,
+    return new Response(
+      JSON.stringify({
+        id: commentId,
+        post_id: postId,
+        user_id: payload.userId,
+        username: payload.username,
+        content,
+        created_at: createdAt,
+        likes: 0,
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  } catch (err) {
+    console.error('Create comment error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+export async function getComments(request, env) {
+  try {
+    const url = new URL(request.url);
+    const postId = url.searchParams.get('postId');
+    if (!postId) {
+      return new Response(JSON.stringify({ error: 'Post ID required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-  });
 
-  router.post('/api/comments', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const { postId, content } = await request.json();
-      if (!postId || !content || typeof content !== 'string' || content.length > 500) {
-        return new Response(JSON.stringify({ error: 'Post ID and content are required, content must be under 500 characters' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
-
-      const user = await env.DB.prepare('SELECT username FROM users WHERE id = ?').bind(userId).first();
-      if (!user) {
-        return new Response('User not found', { status: 404, headers: corsHeaders });
-      }
-
-      const post = await env.DB.prepare('SELECT id FROM posts WHERE id = ?').bind(postId).first();
-      if (!post) {
-        return new Response('Post not found', { status: 404, headers: corsHeaders });
-      }
-
-      const comment = await env.DB.prepare(
-        'INSERT INTO comments (postId, username, content, timestamp) VALUES (?, ?, ?, ?) RETURNING *'
+    const { results } = await env.social_app_db
+      .prepare(
+        'SELECT id, post_id, user_id, username, content, created_at, likes FROM comments WHERE post_id = ? ORDER BY created_at DESC'
       )
-        .bind(postId, user.username, content, new Date().toISOString())
-        .first();
+      .bind(postId)
+      .all();
+    return new Response(JSON.stringify({ comments: results || [], count: results?.length || 0 }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Get comments error:', err);
+    return new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
 
-      return new Response(JSON.stringify(comment), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Create comment error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to create comment: ' + error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-  });
-
-  router.post('/api/comments/:id/like', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const commentId = request.params.id;
-
-      const comment = await env.DB.prepare('SELECT likes FROM comments WHERE id = ?').bind(commentId).first();
-      if (!comment) {
-        return new Response('Comment not found', { status: 404, headers: corsHeaders });
-      }
-
-      await env.DB.prepare('UPDATE comments SET likes = likes + 1 WHERE id = ?').bind(commentId).run();
-
-      return new Response(JSON.stringify({ likes: (comment.likes || 0) + 1 }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Like comment error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to like comment: ' + error.message }), {
-        status: 500,
+export async function likeComment(request, env) {
+  try {
+    const payload = authenticate(request, env);
+    const url = new URL(request.url);
+    const commentId = url.searchParams.get('id');
+    if (!commentId) {
+      return new Response(JSON.stringify({ error: 'Comment ID required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-  });
-                                       }
+
+    const comment = await env.social_app_db
+      .prepare('SELECT id, likes FROM comments WHERE id = ?')
+      .bind(commentId)
+      .first();
+    if (!comment) {
+      return new Response(JSON.stringify({ error: 'Comment not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Note: Like tracking for comments not implemented (future feature).
+    const newLikes = (comment.likes || 0) + 1;
+    await env.social_app_db
+      .prepare('UPDATE comments SET likes = ? WHERE id = ?')
+      .bind(newLikes, commentId)
+      .run();
+
+    return new Response(JSON.stringify({ id: commentId, likes: newLikes }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Like comment error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}

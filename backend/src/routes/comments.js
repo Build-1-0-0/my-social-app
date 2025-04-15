@@ -3,8 +3,8 @@ import { authenticate } from '../utils/auth';
 
 export async function createComment(request, env) {
   try {
-    const payload = authenticate(request, env);
-    const { postId, content } = await request.json();
+    const userData = authenticate(request, env);
+    const { postId, content, parentId = null } = await request.json();
     if (!postId || !content?.trim()) {
       return new Response(JSON.stringify({ error: 'Post ID and content required' }), {
         status: 400,
@@ -23,22 +23,37 @@ export async function createComment(request, env) {
       });
     }
 
+    if (parentId) {
+      const parent = await env.social_app_db
+        .prepare('SELECT id FROM comments WHERE id = ? AND post_id = ?')
+        .bind(parentId, postId)
+        .first();
+      if (!parent) {
+        return new Response(JSON.stringify({ error: 'Parent comment not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+    }
+
     const commentId = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     await env.social_app_db
       .prepare(
-        'INSERT INTO comments (id, post_id, user_id, username, content, created_at, likes) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO comments (id, post_id, user_id, username, content, parent_id, created_at, likes) ' +
+        'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       )
-      .bind(commentId, postId, payload.userId, payload.username, content, createdAt, 0)
+      .bind(commentId, postId, userData.userId, userData.username, content, parentId, createdAt, 0)
       .run();
 
     return new Response(
       JSON.stringify({
         id: commentId,
         post_id: postId,
-        user_id: payload.userId,
-        username: payload.username,
+        user_id: userData.userId,
+        username: userData.username,
         content,
+        parent_id: parentId,
         created_at: createdAt,
         likes: 0,
       }),
@@ -66,7 +81,9 @@ export async function getComments(request, env) {
 
     const { results } = await env.social_app_db
       .prepare(
-        'SELECT id, post_id, user_id, username, content, created_at, likes FROM comments WHERE post_id = ? ORDER BY created_at DESC'
+        'SELECT comments.id, comments.post_id, comments.user_id, comments.username, ' +
+        'comments.content, comments.parent_id, comments.created_at, comments.likes ' +
+        'FROM comments WHERE comments.post_id = ? ORDER BY comments.created_at ASC'
       )
       .bind(postId)
       .all();
@@ -82,9 +99,69 @@ export async function getComments(request, env) {
   }
 }
 
-export async function likeComment(request, env) {
+export async function editComment(request, env) {
   try {
-    const payload = authenticate(request, env);
+    const userData = authenticate(request, env);
+    const url = new URL(request.url);
+    const commentId = url.searchParams.get('id');
+    if (!commentId) {
+      return new Response(JSON.stringify({ error: 'Comment ID required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    const { content } = await request.json();
+    if (!content?.trim()) {
+      return new Response(JSON.stringify({ error: 'Content required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    const comment = await env.social_app_db
+      .prepare('SELECT user_id, post_id FROM comments WHERE id = ?')
+      .bind(commentId)
+      .first();
+    if (!comment) {
+      return new Response(JSON.stringify({ error: 'Comment not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    if (comment.user_id !== userData.userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    await env.social_app_db
+      .prepare('UPDATE comments SET content = ? WHERE id = ?')
+      .bind(content, commentId)
+      .run();
+
+    return new Response(
+      JSON.stringify({
+        id: commentId,
+        post_id: comment.post_id,
+        user_id: userData.userId,
+        username: userData.username,
+        content,
+      }),
+      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  } catch (err) {
+    console.error('Edit comment error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+export async function deleteComment(request, env) {
+  try {
+    const userData = authenticate(request, env);
     const url = new URL(request.url);
     const commentId = url.searchParams.get('id');
     if (!commentId) {
@@ -95,7 +172,54 @@ export async function likeComment(request, env) {
     }
 
     const comment = await env.social_app_db
-      .prepare('SELECT id, likes FROM comments WHERE id = ?')
+      .prepare('SELECT user_id FROM comments WHERE id = ?')
+      .bind(commentId)
+      .first();
+    if (!comment) {
+      return new Response(JSON.stringify({ error: 'Comment not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    if (comment.user_id !== userData.userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    await env.social_app_db
+      .prepare('DELETE FROM comments WHERE id = ?')
+      .bind(commentId)
+      .run();
+
+    return new Response(null, {
+      status: 204,
+      headers: { ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Delete comment error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+export async function likeComment(request, env) {
+  try {
+    const userData = authenticate(request, env);
+    const url = new URL(request.url);
+    const commentId = url.searchParams.get('id');
+    if (!commentId) {
+      return new Response(JSON.stringify({ error: 'Comment ID required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    const comment = await env.social_app_db
+      .prepare('SELECT id FROM comments WHERE id = ?')
       .bind(commentId)
       .first();
     if (!comment) {
@@ -105,14 +229,12 @@ export async function likeComment(request, env) {
       });
     }
 
-    // Note: Like tracking for comments not implemented (future feature).
-    const newLikes = (comment.likes || 0) + 1;
-    await env.social_app_db
-      .prepare('UPDATE comments SET likes = ? WHERE id = ?')
-      .bind(newLikes, commentId)
-      .run();
+    const newLikes = await env.social_app_db
+      .prepare('UPDATE comments SET likes = likes + 1 WHERE id = ? RETURNING likes')
+      .bind(commentId)
+      .first();
 
-    return new Response(JSON.stringify({ id: commentId, likes: newLikes }), {
+    return new Response(JSON.stringify({ id: commentId, likes: newLikes.likes }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (err) {

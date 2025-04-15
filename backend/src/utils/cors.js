@@ -1,4 +1,4 @@
-const corsHeaders = {
+export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -14,15 +14,17 @@ export function handleCors(request) {
     'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : 'null',
   };
 
+  // Handle OPTIONS requests directly
   if (request.method === 'OPTIONS') {
-    return new Response(null, { headers, status: 204 });
+    return Promise.resolve(new Response(null, { headers, status: 204 }));
   }
 
-  return (response) => {
+  // Return a function to wrap responses for other methods
+  return async (response) => {
     if (!(response instanceof Response)) {
-      response = new Response(JSON.stringify(response || { error: 'Invalid response' }), {
+      response = new Response(JSON.stringify({ error: 'Invalid response' }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...headers },
       });
     }
     Object.entries(headers).forEach(([key, value]) => {
@@ -31,5 +33,3 @@ export function handleCors(request) {
     return response;
   };
 }
-
-export { corsHeaders };

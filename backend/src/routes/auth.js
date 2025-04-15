@@ -1,5 +1,5 @@
 import { verify } from 'jsonwebtoken';
-import { corsHeaders } from './cors';
+import { corsHeaders } from '../utils/cors';
 
 /**
  * Authenticate a request using JWT in the Authorization header.

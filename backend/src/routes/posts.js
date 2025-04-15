@@ -1,188 +1,219 @@
-import { verifyToken } from '../utils/auth';
 import { corsHeaders } from '../utils/cors';
+import { authenticate } from '../utils/auth';
 
-export function registerPostRoutes(router) {
-  router.get('/api/posts', async ({ request, env }) => {
-    try {
-      const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-      let userId = null;
-      if (token) {
-        try {
-          userId = await verifyToken(token, env.JWT_SECRET);
-        } catch (error) {
-          // Allow unauthenticated access
-        }
-      }
+export async function getPosts(request, env) {
+  try {
+    const { results } = await env.social_app_db
+      .prepare('SELECT id, user_id, username, content, created_at, likes FROM posts ORDER BY created_at DESC')
+      .all();
+    return new Response(JSON.stringify({ posts: results || [], count: results?.length || 0 }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Get posts error:', err);
+    return new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
 
-      const posts = await env.DB.prepare(
-        'SELECT id, username, content, media_id, created_at, likes FROM posts ORDER BY created_at DESC LIMIT 50'
-      ).all();
-      return new Response(JSON.stringify(posts.results), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Get posts error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to fetch posts: ' + error.message }), {
-        status: 500,
+export async function createPost(request, env) {
+  try {
+    const payload = authenticate(request, env);
+    const { content } = await request.json();
+    if (!content?.trim()) {
+      return new Response(JSON.stringify({ error: 'Content required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-  });
 
-  router.post('/api/posts', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const { content, mediaId } = await request.json();
-      if (!content || typeof content !== 'string' || content.length > 1000) {
-        return new Response(JSON.stringify({ error: 'Content is required and must be a string under 1000 characters' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
-
-      const user = await env.DB.prepare('SELECT username FROM users WHERE id = ?').bind(userId).first();
-      if (!user) {
-        return new Response('User not found', { status: 404, headers: corsHeaders });
-      }
-
-      if (mediaId) {
-        const media = await env.DB.prepare('SELECT username FROM media WHERE media_id = ?').bind(mediaId).first();
-        if (!media || media.username !== user.username) {
-          return new Response(JSON.stringify({ error: 'Invalid media ID' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-          });
-        }
-      }
-
-      const result = await env.DB.prepare(
-        'INSERT INTO posts (username, content, media_id, created_at) VALUES (?, ?, ?, ?) RETURNING *'
+    const postId = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    await env.social_app_db
+      .prepare(
+        'INSERT INTO posts (id, user_id, username, content, created_at, likes) VALUES (?, ?, ?, ?, ?, ?)'
       )
-        .bind(user.username, content, mediaId || null, new Date().toISOString())
-        .first();
+      .bind(postId, payload.userId, payload.username, content, createdAt, 0)
+      .run();
 
-      return new Response(JSON.stringify(result), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Create post error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to create post: ' + error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-  });
+    return new Response(
+      JSON.stringify({ id: postId, user_id: payload.userId, username: payload.username, content, created_at: createdAt, likes: 0 }),
+      { status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  } catch (err) {
+    console.error('Create post error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
 
-  router.post('/api/posts/:id/like', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const postId = request.params.id;
-
-      const post = await env.DB.prepare('SELECT likes FROM posts WHERE id = ?').bind(postId).first();
-      if (!post) {
-        return new Response('Post not found', { status: 404, headers: corsHeaders });
-      }
-
-      await env.DB.prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?').bind(postId).run();
-
-      return new Response(JSON.stringify({ likes: (post.likes || 0) + 1 }), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Like post error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to like post: ' + error.message }), {
-        status: 500,
+export async function likePost(request, env) {
+  try {
+    const payload = authenticate(request, env);
+    const url = new URL(request.url);
+    const postId = url.searchParams.get('id');
+    if (!postId) {
+      return new Response(JSON.stringify({ error: 'Post ID required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-  });
 
-  router.put('/api/posts/:id', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const postId = request.params.id;
-      const { content, mediaId } = await request.json();
-
-      if (!content || typeof content !== 'string' || content.length > 1000) {
-        return new Response(JSON.stringify({ error: 'Content is required and must be a string under 1000 characters' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
-      }
-
-      const user = await env.DB.prepare('SELECT username FROM users WHERE id = ?').bind(userId).first();
-      if (!user) {
-        return new Response('User not found', { status: 404, headers: corsHeaders });
-      }
-
-      const post = await env.DB.prepare('SELECT username FROM posts WHERE id = ?').bind(postId).first();
-      if (!post || post.username !== user.username) {
-        return new Response('Forbidden', { status: 403, headers: corsHeaders });
-      }
-
-      if (mediaId) {
-        const media = await env.DB.prepare('SELECT username FROM media WHERE media_id = ?').bind(mediaId).first();
-        if (!media || media.username !== user.username) {
-          return new Response(JSON.stringify({ error: 'Invalid media ID' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-          });
-        }
-      }
-
-      const updatedPost = await env.DB.prepare('UPDATE posts SET content = ?, media_id = ? WHERE id = ? RETURNING *')
-        .bind(content, mediaId || null, postId)
-        .first();
-
-      return new Response(JSON.stringify(updatedPost), {
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    } catch (error) {
-      console.error('Edit post error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to edit post: ' + error.message }), {
-        status: 500,
+    const post = await env.social_app_db
+      .prepare('SELECT id FROM posts WHERE id = ?')
+      .bind(postId)
+      .first();
+    if (!post) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
+        status: 404,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-  });
 
-  router.delete('/api/posts/:id', async ({ request, env }) => {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return new Response('Unauthorized', { status: 401, headers: corsHeaders });
-
-    try {
-      const userId = await verifyToken(token, env.JWT_SECRET);
-      const postId = request.params.id;
-
-      const user = await env.DB.prepare('SELECT username FROM users WHERE id = ?').bind(userId).first();
-      if (!user) {
-        return new Response('User not found', { status: 404, headers: corsHeaders });
-      }
-
-      const post = await env.DB.prepare('SELECT username FROM posts WHERE id = ?').bind(postId).first();
-      if (!post || post.username !== user.username) {
-        return new Response('Forbidden', { status: 403, headers: corsHeaders });
-      }
-
-      await env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(postId).run();
-
-      return new Response(null, { status: 204, headers: corsHeaders });
-    } catch (error) {
-      console.error('Delete post error:', error);
-      return new Response(JSON.stringify({ error: 'Failed to delete post: ' + error.message }), {
-        status: 500,
+    const existingLike = await env.social_app_db
+      .prepare('SELECT 1 FROM post_likes WHERE user_id = ? AND post_id = ?')
+      .bind(payload.userId, postId)
+      .first();
+    if (existingLike) {
+      return new Response(JSON.stringify({ error: 'Post already liked' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-  });
+
+    const createdAt = new Date().toISOString();
+    await env.social_app_db
+      .prepare('INSERT INTO post_likes (user_id, post_id, created_at) VALUES (?, ?, ?)')
+      .bind(payload.userId, postId, createdAt)
+      .run();
+
+    await env.social_app_db
+      .prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?')
+      .bind(postId)
+      .run();
+
+    const updatedPost = await env.social_app_db
+      .prepare('SELECT likes FROM posts WHERE id = ?')
+      .bind(postId)
+      .first();
+
+    return new Response(JSON.stringify({ id: postId, likes: updatedPost.likes }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Like post error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+export async function updatePost(request, env) {
+  try {
+    const payload = authenticate(request, env);
+    const url = new URL(request.url);
+    const postId = url.searchParams.get('id');
+    if (!postId) {
+      return new Response(JSON.stringify({ error: 'Post ID required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    const { content } = await request.json();
+    if (!content?.trim()) {
+      return new Response(JSON.stringify({ error: 'Content required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    const post = await env.social_app_db
+      .prepare('SELECT user_id FROM posts WHERE id = ?')
+      .bind(postId)
+      .first();
+    if (!post) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    if (post.user_id !== payload.userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    await env.social_app_db
+      .prepare('UPDATE posts SET content = ? WHERE id = ?')
+      .bind(content, postId)
+      .run();
+
+    return new Response(
+      JSON.stringify({ id: postId, user_id: payload.userId, username: payload.username, content }),
+      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  } catch (err) {
+    console.error('Update post error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+export async function deletePost(request, env) {
+  try {
+    const payload = authenticate(request, env);
+    const url = new URL(request.url);
+    const postId = url.searchParams.get('id');
+    if (!postId) {
+      return new Response(JSON.stringify({ error: 'Post ID required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    const post = await env.social_app_db
+      .prepare('SELECT user_id FROM posts WHERE id = ?')
+      .bind(postId)
+      .first();
+    if (!post) {
+      return new Response(JSON.stringify({ error: 'Post not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    if (post.user_id !== payload.userId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    await env.social_app_db
+      .prepare('DELETE FROM posts WHERE id = ?')
+      .bind(postId)
+      .run();
+    await env.social_app_db
+      .prepare('DELETE FROM post_likes WHERE post_id = ?')
+      .bind(postId)
+      .run();
+
+    return new Response(null, {
+      status: 204,
+      headers: { ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Delete post error:', err);
+    return err.response || new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
 }

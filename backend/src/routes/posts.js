@@ -1,26 +1,9 @@
 import { corsHeaders } from '../utils/cors';
 import { authenticate } from '../utils/auth';
 
-export async function getPosts(request, env) {
-  try {
-    const { results } = await env.social_app_db
-      .prepare('SELECT id, user_id, username, content, created_at, likes FROM posts ORDER BY created_at DESC')
-      .all();
-    return new Response(JSON.stringify({ posts: results || [], count: results?.length || 0 }), {
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-  } catch (err) {
-    console.error('Get posts error:', err);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
-  }
-}
-
 export async function createPost(request, env) {
   try {
-    const payload = authenticate(request, env);
+    const userData = authenticate(request, env);
     const { content } = await request.json();
     if (!content?.trim()) {
       return new Response(JSON.stringify({ error: 'Content required' }), {
@@ -35,11 +18,18 @@ export async function createPost(request, env) {
       .prepare(
         'INSERT INTO posts (id, user_id, username, content, created_at, likes) VALUES (?, ?, ?, ?, ?, ?)'
       )
-      .bind(postId, payload.userId, payload.username, content, createdAt, 0)
+      .bind(postId, userData.userId, userData.username, content, createdAt, 0)
       .run();
 
     return new Response(
-      JSON.stringify({ id: postId, user_id: payload.userId, username: payload.username, content, created_at: createdAt, likes: 0 }),
+      JSON.stringify({
+        id: postId,
+        user_id: userData.userId,
+        username: userData.username,
+        content,
+        created_at: createdAt,
+        likes: 0,
+      }),
       { status: 201, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   } catch (err) {
@@ -51,9 +41,38 @@ export async function createPost(request, env) {
   }
 }
 
+export async function getPosts(request, env) {
+  try {
+    const { results } = await env.social_app_db
+      .prepare(`
+        SELECT 
+          posts.id,
+          posts.user_id,
+          posts.username,
+          posts.content,
+          posts.created_at,
+          COUNT(post_likes.post_id) AS likes
+        FROM posts
+        LEFT JOIN post_likes ON post_likes.post_id = posts.id
+        GROUP BY posts.id
+        ORDER BY posts.created_at DESC
+      `)
+      .all();
+    return new Response(JSON.stringify({ posts: results || [], count: results?.length || 0 }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  } catch (err) {
+    console.error('Get posts error:', err);
+    return new Response(JSON.stringify({ error: 'Server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
 export async function likePost(request, env) {
   try {
-    const payload = authenticate(request, env);
+    const userData = authenticate(request, env);
     const url = new URL(request.url);
     const postId = url.searchParams.get('id');
     if (!postId) {
@@ -76,10 +95,10 @@ export async function likePost(request, env) {
 
     const existingLike = await env.social_app_db
       .prepare('SELECT 1 FROM post_likes WHERE user_id = ? AND post_id = ?')
-      .bind(payload.userId, postId)
+      .bind(userData.userId, postId)
       .first();
     if (existingLike) {
-      return new Response(JSON.stringify({ error: 'Post already liked' }), {
+      return new Response(JSON.stringify({ message: 'Post already liked' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -88,20 +107,15 @@ export async function likePost(request, env) {
     const createdAt = new Date().toISOString();
     await env.social_app_db
       .prepare('INSERT INTO post_likes (user_id, post_id, created_at) VALUES (?, ?, ?)')
-      .bind(payload.userId, postId, createdAt)
+      .bind(userData.userId, postId, createdAt)
       .run();
 
-    await env.social_app_db
-      .prepare('UPDATE posts SET likes = likes + 1 WHERE id = ?')
-      .bind(postId)
-      .run();
-
-    const updatedPost = await env.social_app_db
-      .prepare('SELECT likes FROM posts WHERE id = ?')
+    const { likes } = await env.social_app_db
+      .prepare('SELECT COUNT(*) AS likes FROM post_likes WHERE post_id = ?')
       .bind(postId)
       .first();
 
-    return new Response(JSON.stringify({ id: postId, likes: updatedPost.likes }), {
+    return new Response(JSON.stringify({ id: postId, likes }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (err) {
@@ -115,7 +129,7 @@ export async function likePost(request, env) {
 
 export async function updatePost(request, env) {
   try {
-    const payload = authenticate(request, env);
+    const userData = authenticate(request, env);
     const url = new URL(request.url);
     const postId = url.searchParams.get('id');
     if (!postId) {
@@ -142,7 +156,7 @@ export async function updatePost(request, env) {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-    if (post.user_id !== payload.userId) {
+    if (post.user_id !== userData.userId) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -155,7 +169,7 @@ export async function updatePost(request, env) {
       .run();
 
     return new Response(
-      JSON.stringify({ id: postId, user_id: payload.userId, username: payload.username, content }),
+      JSON.stringify({ id: postId, user_id: userData.userId, username: userData.username, content }),
       { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   } catch (err) {
@@ -169,7 +183,7 @@ export async function updatePost(request, env) {
 
 export async function deletePost(request, env) {
   try {
-    const payload = authenticate(request, env);
+    const userData = authenticate(request, env);
     const url = new URL(request.url);
     const postId = url.searchParams.get('id');
     if (!postId) {
@@ -189,7 +203,7 @@ export async function deletePost(request, env) {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
-    if (post.user_id !== payload.userId) {
+    if (post.user_id !== userData.userId) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -202,6 +216,10 @@ export async function deletePost(request, env) {
       .run();
     await env.social_app_db
       .prepare('DELETE FROM post_likes WHERE post_id = ?')
+      .bind(postId)
+      .run();
+    await env.social_app_db
+      .prepare('DELETE FROM comments WHERE post_id = ?')
       .bind(postId)
       .run();
 

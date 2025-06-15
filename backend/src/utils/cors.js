@@ -1,28 +1,30 @@
+// src/utils/cors.js
+
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS,PUT,DELETE',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// This function handles CORS preflight requests
 export function handleCors(request) {
-  const origin = request.headers.get('Origin');
-  const allowedOrigins = ['https://my-social-app.pages.dev', 'http://localhost:3000'];
-
-  const headers = {
-    ...corsHeaders,
-    'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : 'null',
-  };
-
   if (request.method === 'OPTIONS') {
-    // Immediate response for preflight
-    return new Response(null, { status: 204, headers });
+    return () =>
+      new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
   }
 
-  // Wrapper to add headers to other responses
-  return async function(response) {
-    if (!(response instanceof Response)) {
-      response = new Response(JSON.stringify({ error: 'Invalid response' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...headers },
-      });
+  // Return a function that adds CORS headers to any response
+  return (response) => {
+    const newHeaders = new Headers(response.headers);
+    for (const [key, value] of Object.entries(corsHeaders)) {
+      newHeaders.set(key, value);
     }
-    Object.entries(headers).forEach(([key, value]) => {
-      response.headers.set(key, value);
+    return new Response(response.body, {
+      ...response,
+      headers: newHeaders,
     });
-    return response;
   };
 }

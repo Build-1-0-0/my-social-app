@@ -1,10 +1,3 @@
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Max-Age': '86400',
-};
-
 export function handleCors(request) {
   const origin = request.headers.get('Origin');
   const allowedOrigins = ['https://my-social-app.pages.dev', 'http://localhost:3000'];
@@ -14,13 +7,13 @@ export function handleCors(request) {
     'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : 'null',
   };
 
-  // Handle OPTIONS requests directly
   if (request.method === 'OPTIONS') {
-    return Promise.resolve(new Response(null, { headers, status: 204 }));
+    // Immediate response for preflight
+    return new Response(null, { status: 204, headers });
   }
 
-  // Return a function to wrap responses for other methods
-  return async (response) => {
+  // Wrapper to add headers to other responses
+  return async function(response) {
     if (!(response instanceof Response)) {
       response = new Response(JSON.stringify({ error: 'Invalid response' }), {
         status: 500,

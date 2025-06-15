@@ -10,7 +10,7 @@ import { getData } from './routes/data';
 const router = Router();
 
 // CORS preflight
-router.options('*', handleCors);
+router.options('*', (request) => handleCors(request));
 
 // Auth routes
 router.post('/api/users/register', register);
